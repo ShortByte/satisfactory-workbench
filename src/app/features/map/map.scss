@@ -1,0 +1,170 @@
+:host {
+  display: block;
+  /* Fill the viewport below the fixed topbar, independent of the flex chain. */
+  height: calc(100vh - var(--topbar-h));
+}
+
+.map-page {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  height: 100%;
+}
+
+.sidebar {
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  padding: 1rem;
+  overflow-y: auto;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    h2 { margin: 0; font-size: 1.15rem; }
+  }
+}
+
+.icon-btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { border-color: var(--accent); }
+  &:disabled { opacity: 0.4; }
+}
+
+.session { color: var(--accent); font-size: 0.85rem; margin: 0.25rem 0 0.75rem; }
+.total { color: var(--muted); font-size: 0.8rem; margin: 0 0 0.5rem; }
+
+.hint {
+  font-size: 0.85rem;
+  color: var(--muted);
+  &--error { color: #ffb4ab; }
+}
+.link { color: var(--accent); font-size: 0.85rem; }
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  &__item label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.2rem 0;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+
+  &__label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  &__count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.78rem; }
+}
+
+.swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+
+  &--sm { width: 9px; height: 9px; }
+}
+
+.subfilter {
+  list-style: none;
+  margin: 0.1rem 0 0.35rem;
+  padding: 0 0 0 1.4rem;
+  border-left: 1px solid var(--border);
+  margin-left: 0.55rem;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.12rem 0;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .legend__label { color: var(--text); }
+  .legend__label--muted { color: var(--muted); font-size: 0.76rem; }
+}
+
+.map-host {
+  position: relative;
+  overflow: hidden;
+}
+
+.map-canvas {
+  position: absolute;
+  inset: 0;
+  background: #0c1014;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* Leaflet popup theming to match the dark UI. */
+:host ::ng-deep {
+  .leaflet-container { background: #0c1014; font-family: inherit; }
+
+  /* SVG badge markers: bare <img>, shadow baked into the image (no CSS filter). */
+  .sf-marker { cursor: pointer; }
+
+  /* Resource-icon markers: real item icon in a badge; ring colour = purity. */
+  .sf-imgmk {
+    cursor: pointer;
+    box-sizing: border-box;
+    background: #0d1218;
+    border: 2.5px solid #888;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  }
+  .sf-imgmk img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    pointer-events: none;
+    transition: transform 0.1s ease;
+  }
+  .sf-imgmk:hover img { transform: scale(1.25); }
+
+  .sf-node { border-radius: 50%; }
+  .sf-node--impure { border-color: #9aa4b0; }
+  .sf-node--normal { border-color: #eef2f7; }
+  .sf-node--pure { border-color: #ffd23f; }
+
+  .sf-ext {
+    border-radius: 6px;
+    border-color: #ff9e2c;
+  }
+  .leaflet-popup-content-wrapper,
+  .leaflet-popup-tip {
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .leaflet-popup-content { margin: 0.6rem 0.8rem; font-size: 0.82rem; line-height: 1.5; }
+  .pop code { font-size: 0.75rem; }
+  .pop-cat { color: var(--accent); }
+  .leaflet-bar a {
+    background: var(--panel);
+    color: var(--text);
+    border-color: var(--border);
+    &:hover { background: var(--border); }
+  }
+}

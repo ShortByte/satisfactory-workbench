@@ -1,0 +1,53 @@
+{
+  "name": "satisfactory-tools",
+  "version": "0.0.0",
+  "main": "dist-electron/electron/main.js",
+  "scripts": {
+    "ng": "ng",
+    "web": "ng serve --port 4200",
+    "start": "npm run dev",
+    "dev": "concurrently -k -n NG,EL -c blue,green \"ng serve --port 4200\" \"npm run electron:start\"",
+    "electron:start": "wait-on http-get://localhost:4200 && npm run electron:compile && node scripts/launch-electron.js",
+    "electron:compile": "tsc -p tsconfig.electron.json",
+    "build:web": "ng build",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "build": "npm run build:web && npm run build:electron",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "data:game": "node scripts/data/build-game-data.cjs",
+    "data:nodes": "node scripts/data/build-node-data.cjs",
+    "data:icons": "node scripts/data/download-icons.cjs",
+    "data:tiles": "node scripts/data/download-tiles.cjs",
+    "data:all": "npm run data:game && npm run data:nodes && npm run data:icons && npm run data:tiles"
+  },
+  "private": true,
+  "packageManager": "npm@11.13.0",
+  "dependencies": {
+    "@angular/common": "^22.0.0",
+    "@angular/compiler": "^22.0.0",
+    "@angular/core": "^22.0.0",
+    "@angular/forms": "^22.0.0",
+    "@angular/platform-browser": "^22.0.0",
+    "@angular/router": "^22.0.0",
+    "@etothepii/satisfactory-file-parser": "^4.1.1",
+    "@types/leaflet": "^1.9.21",
+    "leaflet": "^1.9.4",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.0.6",
+    "@angular/cli": "^22.0.6",
+    "@angular/compiler-cli": "^22.0.0",
+    "@types/node": "^26.1.1",
+    "cbor-x": "^1.6.4",
+    "concurrently": "^10.0.3",
+    "cross-env": "^10.1.0",
+    "electron": "^43.1.0",
+    "jsdom": "^28.0.0",
+    "prettier": "^3.8.1",
+    "typescript": "~6.0.2",
+    "vitest": "^4.0.8",
+    "wait-on": "^9.0.10"
+  }
+}

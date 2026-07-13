@@ -1,0 +1,121 @@
+<section class="loader">
+  <div class="loader__actions">
+    <button class="btn btn--primary" (click)="save.openViaDialog()" [disabled]="save.loading()">
+      Save-Datei öffnen…
+    </button>
+
+    @if (save.bundledSaves().length > 0) {
+      <span class="loader__hint">oder ein Beispiel aus <code>saves/</code>:</span>
+      @for (b of save.bundledSaves(); track b.filePath) {
+        <button class="btn" (click)="save.openPath(b.filePath)" [disabled]="save.loading()">
+          {{ b.fileName }} ({{ formatBytes(b.fileSizeBytes) }})
+        </button>
+      }
+    }
+  </div>
+
+  @if (!save.isElectron) {
+    <p class="banner banner--warn">
+      Läuft ohne Electron-Bridge (reiner Browser). Starte die App mit
+      <code>npm run dev</code>, um Save-Dateien zu laden.
+    </p>
+  }
+
+  @if (save.loading()) {
+    <p class="banner">Save wird geparst…</p>
+  }
+
+  @if (save.error(); as err) {
+    <p class="banner banner--error">Fehler: {{ err }}</p>
+  }
+</section>
+
+@if (save.summary(); as s) {
+  <section class="summary">
+    <header class="summary__head">
+      <h2>{{ s.sessionName || s.saveName || s.fileName }}</h2>
+      <span class="pill">{{ s.fileName }}</span>
+      <span class="pill">{{ formatBytes(s.fileSizeBytes) }}</span>
+      @if (s.creativeModeEnabled) { <span class="pill pill--accent">Creative</span> }
+      @if (s.isModded) { <span class="pill pill--warn">Modded</span> }
+    </header>
+
+    <div class="cards">
+      <div class="card">
+        <span class="card__label">Objekte gesamt</span>
+        <span class="card__value">{{ s.totalObjectCount | number }}</span>
+      </div>
+      <div class="card">
+        <span class="card__label">Entities</span>
+        <span class="card__value">{{ s.totalEntityCount | number }}</span>
+      </div>
+      <div class="card">
+        <span class="card__label">Components</span>
+        <span class="card__value">{{ s.totalComponentCount | number }}</span>
+      </div>
+      <div class="card">
+        <span class="card__label">Level</span>
+        <span class="card__value">{{ s.levelCount | number }}</span>
+      </div>
+      <div class="card">
+        <span class="card__label">Spielzeit</span>
+        <span class="card__value">{{ formatDuration(s.playDurationSeconds) }}</span>
+      </div>
+      <div class="card">
+        <span class="card__label">Parse-Dauer</span>
+        <span class="card__value">{{ s.parseDurationMs | number }} ms</span>
+      </div>
+    </div>
+
+    <div class="meta">
+      <div><span>Build-Version</span><b>{{ s.buildVersion }}</b></div>
+      <div><span>Save-Version</span><b>{{ s.saveVersion }}</b></div>
+      <div><span>Map</span><b>{{ s.mapName }}</b></div>
+      <div><span>Gespeichert</span><b>{{ s.saveDateTime }}</b></div>
+    </div>
+
+    <div class="tables">
+      <div class="panel">
+        <h3>Häufigste Objekttypen</h3>
+        <table>
+          <thead>
+            <tr><th>Typ</th><th class="num">Anzahl</th></tr>
+          </thead>
+          <tbody>
+            @for (t of s.topTypes; track t.typePath) {
+              <tr>
+                <td [title]="t.typePath">{{ shortType(t.typePath) }}</td>
+                <td class="num">{{ t.count | number }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <h3>Level ({{ s.levels.length }})</h3>
+        <table>
+          <thead>
+            <tr><th>Level</th><th class="num">Objekte</th><th class="num">Collectables</th></tr>
+          </thead>
+          <tbody>
+            @for (lvl of s.levels.slice(0, 30); track lvl.name) {
+              <tr>
+                <td [title]="lvl.name">{{ lvl.name || '(persistent)' }}</td>
+                <td class="num">{{ lvl.objectCount | number }}</td>
+                <td class="num">{{ lvl.collectableCount | number }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        @if (s.levels.length > 30) {
+          <p class="panel__more">… {{ s.levels.length - 30 }} weitere</p>
+        }
+      </div>
+    </div>
+  </section>
+} @else if (!save.loading()) {
+  <section class="empty">
+    <p>Noch keine Save-Datei geladen.</p>
+  </section>
+}

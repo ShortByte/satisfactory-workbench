@@ -1,0 +1,226 @@
+<div class="calc">
+  <header class="calc__head">
+    <h2>Produktions-Calculator</h2>
+    <p class="hint">Standard-Rezepte · Alt-Rezepte & Map-Verknüpfung folgen</p>
+  </header>
+
+  <section class="controls">
+    <label class="field">
+      <span>Produkt</span>
+      <select [ngModel]="target()" (ngModelChange)="target.set($event)">
+        @for (it of items; track it.className) {
+          <option [value]="it.className">{{ it.name }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="field field--rate">
+      <span>Rate (pro Minute)</span>
+      <input type="number" min="0" step="1" [ngModel]="rate()" (ngModelChange)="rate.set(+$event)" />
+    </label>
+
+    @if (hasChoices()) {
+      <button class="reset-btn" (click)="resetRecipes()">Rezepte zurücksetzen</button>
+    }
+  </section>
+
+  @if (result(); as res) {
+    <section class="summary">
+      <div class="card">
+        <span class="card__label">Gebäude gesamt</span>
+        <span class="card__value">{{ res.totalBuildings | number: '1.0-1' }}</span>
+      </div>
+      <div class="card">
+        <span class="card__label">Strom</span>
+        <span class="card__value">{{ res.totalPower | number: '1.0-1' }} MW</span>
+      </div>
+      <div class="card">
+        <span class="card__label">Rohstoff-Arten</span>
+        <span class="card__value">{{ res.raw.length }}</span>
+      </div>
+    </section>
+
+    @if (res.warnings.length) {
+      <div class="warnings">
+        @for (w of res.warnings; track w) {
+          <p>⚠ {{ w }}</p>
+        }
+      </div>
+    }
+
+    <div class="panels">
+      <div class="panel">
+        <div class="panel__head">
+          <h3>Produktion</h3>
+          <div class="viewtoggle">
+            <button [class.active]="view() === 'table'" (click)="view.set('table')">Übersicht</button>
+            <button [class.active]="view() === 'tree'" (click)="view.set('tree')">Baum</button>
+          </div>
+        </div>
+
+        @if (view() === 'table') {
+        <table>
+          <thead>
+            <tr>
+              <th>Produkt</th>
+              <th>Rezept</th>
+              <th>Gebäude</th>
+              <th class="num">Anzahl</th>
+              <th class="num">Rate/min</th>
+              <th class="num">MW</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of res.steps; track s.recipe.className) {
+              <tr>
+                <td>
+                  <span class="itemcell">
+                    <img class="iico" [src]="icon(s.item)" alt="" />{{ s.itemName }}
+                  </span>
+                </td>
+                <td>
+                  @if (recipesFor(s.item).length > 1) {
+                    <select
+                      class="recipe-select"
+                      [class.alt]="s.recipe.alternate"
+                      [ngModel]="s.recipe.className"
+                      (ngModelChange)="chooseRecipe(s.item, $event)"
+                    >
+                      @for (r of recipesFor(s.item); track r.className) {
+                        <option [value]="r.className">{{ r.name }}{{ r.alternate ? ' (Alt)' : '' }}</option>
+                      }
+                    </select>
+                  } @else {
+                    <span [class.alt]="s.recipe.alternate">{{ s.recipe.name }}</span>
+                  }
+                </td>
+                <td>{{ s.buildingName }}</td>
+                <td class="num">{{ s.buildings | number: '1.0-2' }}</td>
+                <td class="num">{{ s.rate | number: '1.0-1' }}</td>
+                <td class="num">{{ s.power | number: '1.0-1' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        } @else if (tree(); as root) {
+          <ul class="tree">
+            <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: root }"></ng-container>
+          </ul>
+        }
+      </div>
+
+      <div class="panel">
+        <h3>Rohstoffe</h3>
+        <table>
+          <thead>
+            <tr><th>Ressource</th><th class="num">Rate/min</th></tr>
+          </thead>
+          <tbody>
+            @for (r of res.raw; track r.item) {
+              <tr>
+                <td>
+                  <span class="itemcell">
+                    <img class="iico" [src]="icon(r.item)" alt="" />{{ r.name }}
+                  </span>
+                </td>
+                <td class="num">{{ r.rate | number: '1.0-1' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <section class="world">
+      <h3>In deiner Welt</h3>
+      @if (!save.hasSave()) {
+        <p class="hint">Lade ein Save (Dashboard), um freie Ressourcen-Nodes abzugleichen.</p>
+      } @else if (worldAvailability(); as avail) {
+        <p class="hint">
+          „Schon abgebaut" = tatsächliche Förderung deiner Extraktoren (inkl. Overclock) · „Frei max"
+          = Potenzial freier Nodes mit MinerMk3 / Öl-Extraktor @100%.
+        </p>
+        <div class="panel">
+          <table>
+            <thead>
+              <tr>
+                <th>Ressource</th>
+                <th class="num">Benötigt/min</th>
+                <th class="num">Schon abgebaut/min</th>
+                <th class="num">Freie Nodes</th>
+                <th>Reinheit (U/N/R)</th>
+                <th class="num">Frei max/min</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of avail; track a.resource) {
+                <tr>
+                  <td>
+                    <span class="itemcell">
+                      <img class="iico" [src]="a.icon" alt="" />{{ a.name }}
+                    </span>
+                  </td>
+                  <td class="num">{{ a.needed | number: '1.0-1' }}</td>
+                  <td class="num">
+                    @if (a.extractingCount > 0) {
+                      {{ a.extractingRate | number: '1.0-0' }}
+                      <span class="muted">({{ a.extractingCount }}×)</span>
+                    } @else {
+                      <span class="muted">—</span>
+                    }
+                  </td>
+                  <td class="num">{{ a.freeNodes }}</td>
+                  <td>
+                    @if (a.hasNodes) {
+                      {{ a.byPurity.impure }} / {{ a.byPurity.normal }} / {{ a.byPurity.pure }}
+                    } @else {
+                      <span class="muted">—</span>
+                    }
+                  </td>
+                  <td class="num">{{ a.hasNodes ? (a.maxRate | number: '1.0-0') : '—' }}</td>
+                  <td>
+                    @if (!a.hasNodes) {
+                      <span class="muted">keine Node-Daten</span>
+                    } @else if (a.enough) {
+                      <span class="ok">✓ reicht</span>
+                    } @else {
+                      <span class="bad">⚠ zu wenig</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="hint">Node-Daten werden geladen…</p>
+      }
+    </section>
+  } @else {
+    <p class="hint">Produkt und Rate wählen.</p>
+  }
+
+  <ng-template #treeNode let-node>
+    <li class="tree__node">
+      <div class="tree__row" [class.raw]="node.isRaw">
+        <img class="iico" [src]="icon(node.item)" alt="" />
+        <span class="tree__item">{{ node.itemName }}</span>
+        <span class="tree__rate">{{ node.rate | number: '1.0-1' }}/min</span>
+        @if (!node.isRaw) {
+          <span class="tree__mach">{{ node.buildings | number: '1.0-2' }}× {{ node.buildingName }}</span>
+          <span class="tree__recipe" [class.alt]="node.recipe.alternate">{{ node.recipe.name }}</span>
+        } @else {
+          <span class="tree__rawtag">Rohstoff</span>
+        }
+      </div>
+      @if (node.children.length) {
+        <ul class="tree">
+          @for (c of node.children; track $index) {
+            <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: c }"></ng-container>
+          }
+        </ul>
+      }
+    </li>
+  </ng-template>
+</div>

@@ -1,0 +1,101 @@
+<div class="map-page">
+  <aside class="sidebar">
+    <div class="sidebar__head">
+      <h2>Karte</h2>
+      <button class="icon-btn" (click)="reload()" [disabled]="loading()" title="Neu laden">↻</button>
+    </div>
+
+    @if (save.summary(); as s) {
+      <p class="session">{{ s.sessionName || s.saveName }}</p>
+    }
+
+    @if (loading()) {
+      <p class="hint">Features werden geladen…</p>
+    }
+    @if (error(); as err) {
+      <p class="hint hint--error">{{ err }}</p>
+      @if (!save.hasSave()) {
+        <a class="link" routerLink="/">→ Zuerst ein Save laden</a>
+      }
+    }
+
+    @if (data(); as d) {
+      <p class="total">{{ d.features.length | number }} Objekte</p>
+      <ul class="legend">
+        @for (entry of categories; track entry[0]) {
+          @if (count(entry[0]) > 0) {
+            <li class="legend__item">
+              <label>
+                <input
+                  type="checkbox"
+                  [checked]="visible()[entry[0]]"
+                  (change)="toggle(entry[0])"
+                />
+                <span class="swatch" [style.background]="entry[1].color"></span>
+                <span class="legend__label">{{ entry[1].label }}</span>
+                <span class="legend__count">{{ count(entry[0]) | number }}</span>
+              </label>
+
+              @if (entry[0] === 'extractor' && visible()['extractor'] && extractorResources().length) {
+                <ul class="subfilter">
+                  @for (r of extractorResources(); track r.key) {
+                    <li>
+                      <label>
+                        <input
+                          type="checkbox"
+                          [checked]="visibleResources()[r.key] !== false"
+                          (change)="toggleResource(r.key)"
+                        />
+                        <span class="swatch swatch--sm" [style.background]="r.color"></span>
+                        <span class="legend__label">{{ r.label }}</span>
+                        <span class="legend__count">{{ r.count | number }}</span>
+                      </label>
+                    </li>
+                  }
+                </ul>
+              }
+
+              @if (entry[0] === 'resourceNode' && visible()['resourceNode'] && nodeResources().length) {
+                <ul class="subfilter">
+                  @for (p of purities; track p.key) {
+                    <li>
+                      <label>
+                        <input
+                          type="checkbox"
+                          [checked]="visiblePurities()[p.key] !== false"
+                          (change)="togglePurity(p.key)"
+                        />
+                        <span class="legend__label legend__label--muted">Reinheit: {{ p.label }}</span>
+                      </label>
+                    </li>
+                  }
+                  @for (r of nodeResources(); track r.key) {
+                    <li>
+                      <label>
+                        <input
+                          type="checkbox"
+                          [checked]="visibleResources()[r.key] !== false"
+                          (change)="toggleResource(r.key)"
+                        />
+                        <span class="swatch swatch--sm" [style.background]="r.color"></span>
+                        <span class="legend__label">{{ r.label }}</span>
+                        <span class="legend__count">{{ r.count | number }}</span>
+                      </label>
+                    </li>
+                  }
+                </ul>
+              }
+            </li>
+          }
+        }
+      </ul>
+    }
+  </aside>
+
+  <div class="map-host">
+    <div #mapEl class="map-canvas"></div>
+    @if (!data() && !loading() && !error()) {
+      <div class="overlay">Keine Kartendaten.</div>
+    }
+  </div>
+</div>

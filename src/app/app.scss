@@ -1,0 +1,60 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 0 1.25rem;
+  height: var(--topbar-h);
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag; /* draggable window chrome in Electron */
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+
+  &__mark { color: var(--accent); }
+  &__name { letter-spacing: 0.2px; }
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  -webkit-app-region: no-drag;
+
+  a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    padding: 0.25rem 0;
+    border-bottom: 2px solid transparent;
+
+    &:hover { color: var(--text); }
+    &.active { color: var(--text); border-bottom-color: var(--accent); }
+  }
+
+  &__soon {
+    color: color-mix(in srgb, var(--muted) 60%, transparent);
+    font-size: 0.9rem;
+    cursor: default;
+  }
+}
+
+.content {
+  flex: 1;
+  overflow: auto;
+}

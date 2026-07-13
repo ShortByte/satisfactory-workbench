@@ -1,0 +1,41 @@
+/* Global styles + theme tokens for Satisfactory Tools. */
+:root {
+  --bg: #10151b;
+  --panel: #1b2129;
+  --border: #2a323d;
+  --text: #e6ebf1;
+  --muted: #8b97a7;
+  --accent: #ff9e2c; /* Satisfactory orange */
+  --topbar-h: 52px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+code {
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.85em;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
