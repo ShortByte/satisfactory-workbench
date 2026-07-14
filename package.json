@@ -35,6 +35,7 @@
     "appId": "de.shortbyte.satisfactory-workbench",
     "productName": "Satisfactory Workbench",
     "icon": "build/icon.ico",
+    "artifactName": "Satisfactory-Workbench-Setup-${version}.${ext}",
     "directories": {
       "output": "release"
     },
