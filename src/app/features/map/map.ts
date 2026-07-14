@@ -13,6 +13,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import * as L from 'leaflet';
+import './leaflet-global-setup'; // must run before leaflet.markercluster to expose window.L
 import 'leaflet.markercluster'; // extends L with markerClusterGroup
 import type { FeatureCategory, MapFeature, MapFeatureSet } from '../../../shared/ipc-types';
 import { CATEGORY_STYLES, CategoryStyle, MapService, resourceInfo } from '../../core/map.service';
@@ -625,8 +626,16 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
     const style = CATEGORY_STYLES[cat];
     const useIcon = ICON_CATEGORIES.has(cat);
     // Icon (DOM) categories cluster for performance; canvas categories don't.
+    //
+    // leaflet.markercluster is a legacy UMD plugin that extends a global `L`
+    // rather than the `L` module namespace imported above - under esbuild's
+    // module bundling each `import * as L from 'leaflet'` produces its own
+    // wrapper object, so the plugin's additions never reach this file's `L`.
+    // leaflet-global-setup.ts exposes the extended instance on window.L;
+    // read markerClusterGroup from there instead of the local `L`.
+    const markerClusterGroup = (window as unknown as { L: typeof L }).L.markerClusterGroup;
     const group: L.LayerGroup = useIcon
-      ? L.markerClusterGroup({
+      ? markerClusterGroup({
           chunkedLoading: true,
           maxClusterRadius: 55,
           disableClusteringAtZoom: 6,
