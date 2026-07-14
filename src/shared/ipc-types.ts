@@ -17,6 +17,7 @@ export const IpcChannels = {
   SftpListSaves: 'sftp:list-saves',
   SftpOpen: 'sftp:open',
   AppVersion: 'app:version',
+  GetReleases: 'update:releases',
   UpdateCheck: 'update:check',
   UpdateDownload: 'update:download',
   UpdateInstall: 'update:install',
@@ -225,6 +226,21 @@ export type UpdateState =
   | 'downloaded'
   | 'error';
 
+/** A published GitHub release (for the changelog page). */
+export interface ReleaseInfo {
+  /** Tag name, e.g. "v0.1.1". */
+  version: string;
+  /** Release title (falls back to the tag). */
+  name: string;
+  /** Release body in Markdown. */
+  notes: string;
+  /** ISO publish date. */
+  date: string;
+  /** URL of the release on GitHub. */
+  url: string;
+  prerelease: boolean;
+}
+
 /** Auto-update status pushed from the main process to the renderer. */
 export interface UpdateStatus {
   state: UpdateState;
@@ -262,6 +278,8 @@ export interface SatisfactoryBridge {
 
   /** The running app version (from package.json / the installed build). */
   appVersion(): Promise<string>;
+  /** Fetch published GitHub releases for the changelog. */
+  getReleases(): Promise<IpcResult<ReleaseInfo[]>>;
 
   // Auto-update (GitHub releases).
   /** Check GitHub releases for a newer version. */

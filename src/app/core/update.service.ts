@@ -1,5 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
-import type { UpdateStatus } from '../../shared/ipc-types';
+import type { ReleaseInfo, UpdateStatus } from '../../shared/ipc-types';
 
 /**
  * Renderer-side facade for the GitHub-releases auto-updater. Subscribes to
@@ -45,5 +45,13 @@ export class UpdateService {
   /** Quit and install the downloaded update. */
   install(): void {
     this.bridge?.updateInstall();
+  }
+
+  /** Fetch the published GitHub releases (changelog); throws on failure. */
+  async getReleases(): Promise<ReleaseInfo[]> {
+    if (!this.bridge) return [];
+    const res = await this.bridge.getReleases();
+    if (!res.ok) throw new Error(res.error);
+    return res.data;
   }
 }

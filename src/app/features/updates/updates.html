@@ -1,0 +1,93 @@
+<section class="updates-page">
+  <header class="up__head">
+    <h2>{{ i18n.t('update.pageTitle') }}</h2>
+  </header>
+
+  <div class="up__control">
+    <span class="up__version">
+      {{ i18n.t('update.installed') }}: <b>v{{ update.appVersion() }}</b>
+    </span>
+
+    <button
+      class="btn"
+      (click)="checkUpdate()"
+      [disabled]="update.state() === 'checking' || update.state() === 'downloading'"
+    >
+      {{ i18n.t('update.check') }}
+    </button>
+
+    @switch (update.state()) {
+      @case ('checking') {
+        <span class="up__status">{{ i18n.t('update.statusChecking') }}</span>
+      }
+      @case ('not-available') {
+        <span class="up__status ok">✓ {{ i18n.t('update.statusUpToDate') }}</span>
+      }
+      @case ('available') {
+        <span class="up__status accent">
+          {{ i18n.t('update.statusAvailable', { version: update.version() }) }}
+        </span>
+        <button class="btn btn--primary" (click)="downloadUpdate()">
+          {{ i18n.t('update.download') }}
+        </button>
+      }
+      @case ('downloading') {
+        <span class="up__status accent">
+          {{ i18n.t('update.statusDownloading', { n: update.progress() }) }}
+        </span>
+      }
+      @case ('downloaded') {
+        <span class="up__status accent">
+          {{ i18n.t('update.statusReady', { version: update.version() }) }}
+        </span>
+        <button class="btn btn--primary" (click)="installUpdate()">
+          {{ i18n.t('update.restartInstall') }}
+        </button>
+      }
+      @case ('error') {
+        <span class="up__status bad">⚠ {{ i18n.t('update.statusError') }}</span>
+      }
+    }
+  </div>
+
+  <h3 class="up__cl-title">{{ i18n.t('update.changelog') }}</h3>
+
+  @if (loadingReleases()) {
+    <p class="hint">{{ i18n.t('update.loadingReleases') }}</p>
+  } @else if (releasesError()) {
+    <p class="hint hint--error">
+      {{ i18n.t('update.releasesError') }}
+      <button class="btn btn--sm" (click)="loadReleases()">{{ i18n.t('dash.refresh') }}</button>
+    </p>
+  } @else if (!releases().length) {
+    <p class="hint">{{ i18n.t('update.noReleases') }}</p>
+  } @else {
+    <ul class="rel">
+      @for (r of releases(); track r.version) {
+        <li class="rel__item">
+          <div class="rel__head">
+            <span class="rel__ver">{{ r.version }}</span>
+            @if (isCurrent(r)) {
+              <span class="rel__badge rel__badge--current">{{ i18n.t('update.current') }}</span>
+            }
+            @if (r.prerelease) {
+              <span class="rel__badge rel__badge--pre">{{ i18n.t('update.prerelease') }}</span>
+            }
+            <span class="rel__date">{{ formatDate(r.date) }}</span>
+            <a class="rel__link" [href]="r.url" target="_blank" rel="noopener noreferrer">
+              {{ i18n.t('update.openOnGithub') }}
+            </a>
+          </div>
+          @if (r.name && r.name !== r.version) {
+            <div class="rel__name">{{ r.name }}</div>
+          }
+          @if (r.notes) {
+            <div class="rel__notes" [innerHTML]="notes(r.notes)"></div>
+          } @else {
+            <p class="rel__empty">—</p>
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

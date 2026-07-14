@@ -11,6 +11,9 @@
       </a>
       <a routerLink="/map" routerLinkActive="active">{{ i18n.t('nav.map') }}</a>
       <a routerLink="/calculator" routerLinkActive="active">{{ i18n.t('nav.calculator') }}</a>
+      @if (isElectron) {
+        <a routerLink="/updates" routerLinkActive="active">{{ i18n.t('nav.updates') }}</a>
+      }
     </nav>
 
     <div class="titlebar__drag"></div>

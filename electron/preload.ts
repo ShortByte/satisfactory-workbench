@@ -4,6 +4,7 @@ import {
   type BundledSave,
   type IpcResult,
   type MapFeatureSet,
+  type ReleaseInfo,
   type RemoteSave,
   type SatisfactoryBridge,
   type SaveLocation,
@@ -46,6 +47,8 @@ const bridge: SatisfactoryBridge = {
     ipcRenderer.invoke(IpcChannels.SftpOpen, id, remotePath, modifiedAtMs),
 
   appVersion: (): Promise<string> => ipcRenderer.invoke(IpcChannels.AppVersion),
+  getReleases: (): Promise<IpcResult<ReleaseInfo[]>> =>
+    ipcRenderer.invoke(IpcChannels.GetReleases),
   updateCheck: (): Promise<IpcResult<null>> => ipcRenderer.invoke(IpcChannels.UpdateCheck),
   updateDownload: (): Promise<IpcResult<null>> => ipcRenderer.invoke(IpcChannels.UpdateDownload),
   updateInstall: () => ipcRenderer.send(IpcChannels.UpdateInstall),

@@ -32,6 +32,7 @@ export const TRANSLATIONS: Record<string, Entry> = {
   'nav.dashboard': { en: 'Dashboard', de: 'Dashboard' },
   'nav.map': { en: 'Map', de: 'Karte' },
   'nav.calculator': { en: 'Calculator', de: 'Calculator' },
+  'nav.updates': { en: 'Updates', de: 'Updates' },
   'nav.newSave': { en: 'New save', de: 'Neuer Save' },
   'nav.reloadIn': { en: 'loads in {n}s', de: 'lädt in {n}s' },
   'nav.newSaveTitle': {
@@ -41,6 +42,17 @@ export const TRANSLATIONS: Record<string, Entry> = {
 
   // ── Auto-update ───────────────────────────────────────────────────────
   'update.title': { en: 'Updates', de: 'Updates' },
+  'update.pageTitle': { en: 'Updates & changelog', de: 'Updates & Changelog' },
+  'update.changelog': { en: 'Changelog', de: 'Changelog' },
+  'update.loadingReleases': { en: 'Loading releases…', de: 'Releases werden geladen…' },
+  'update.releasesError': {
+    en: "Couldn't load releases.",
+    de: 'Releases konnten nicht geladen werden.',
+  },
+  'update.noReleases': { en: 'No releases published yet.', de: 'Noch keine Releases veröffentlicht.' },
+  'update.openOnGithub': { en: 'View on GitHub', de: 'Auf GitHub ansehen' },
+  'update.current': { en: 'Installed', de: 'Installiert' },
+  'update.prerelease': { en: 'Pre-release', de: 'Vorabversion' },
   'update.installed': { en: 'Installed version', de: 'Installierte Version' },
   'update.check': { en: 'Check for updates', de: 'Nach Updates suchen' },
   'update.download': { en: 'Download', de: 'Herunterladen' },

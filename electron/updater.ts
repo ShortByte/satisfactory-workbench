@@ -1,6 +1,9 @@
 import type { BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import { IpcChannels, type UpdateStatus } from '../src/shared/ipc-types';
+import { IpcChannels, type ReleaseInfo, type UpdateStatus } from '../src/shared/ipc-types';
+
+/** GitHub repository that hosts the releases (matches the publish config). */
+const REPO = 'ShortByte/satisfactory-workbench';
 
 /**
  * Auto-update via GitHub releases (electron-updater). The main process drives the
@@ -49,4 +52,33 @@ export async function downloadUpdate(): Promise<void> {
 /** Quit and install a downloaded update. */
 export function quitAndInstall(): void {
   autoUpdater.quitAndInstall();
+}
+
+interface GithubRelease {
+  tag_name: string;
+  name: string | null;
+  body: string | null;
+  published_at: string;
+  html_url: string;
+  prerelease: boolean;
+  draft: boolean;
+}
+
+/** Fetch published (non-draft) GitHub releases for the changelog page. */
+export async function fetchReleases(): Promise<ReleaseInfo[]> {
+  const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=20`, {
+    headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'satisfactory-workbench' },
+  });
+  if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+  const data = (await res.json()) as GithubRelease[];
+  return data
+    .filter((r) => !r.draft)
+    .map((r) => ({
+      version: r.tag_name,
+      name: r.name || r.tag_name,
+      notes: r.body ?? '',
+      date: r.published_at,
+      url: r.html_url,
+      prerelease: r.prerelease,
+    }));
 }

@@ -16,5 +16,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/calculator/calculator').then((m) => m.Calculator),
     title: 'Calculator',
   },
+  {
+    path: 'updates',
+    loadComponent: () => import('./features/updates/updates').then((m) => m.UpdatesPage),
+    title: 'Updates',
+  },
   { path: '**', redirectTo: '' },
 ];

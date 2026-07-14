@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import { readdir, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import type { SatisfactorySave } from '@etothepii/satisfactory-file-parser';
@@ -8,6 +8,7 @@ import {
   type BundledSave,
   type IpcResult,
   type MapFeatureSet,
+  type ReleaseInfo,
   type RemoteSave,
   type SaveLocation,
   type SaveSummary,
@@ -19,7 +20,13 @@ import { extractMapFeatures } from './map-service';
 import { discoverSaveLocations } from './save-locations';
 import { addConnection, listConnections, removeConnection } from './sftp-config';
 import { downloadRemoteSave, listRemoteSaves, testConnection } from './sftp-service';
-import { checkForUpdates, downloadUpdate, initAutoUpdater, quitAndInstall } from './updater';
+import {
+  checkForUpdates,
+  downloadUpdate,
+  fetchReleases,
+  initAutoUpdater,
+  quitAndInstall,
+} from './updater';
 
 /** Dev server URL served by `ng serve` (see the `dev` npm script). */
 const DEV_SERVER_URL = process.env.ELECTRON_RENDERER_URL ?? 'http://localhost:4200';
@@ -66,6 +73,11 @@ function createWindow(): void {
 
   mainWindow.once('ready-to-show', () => mainWindow?.show());
   mainWindow.on('closed', () => (mainWindow = null));
+  // Open external links (e.g. changelog/GitHub) in the user's browser, not a new window.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//.test(url)) void shell.openExternal(url);
+    return { action: 'deny' };
+  });
   const sendMaximized = () =>
     mainWindow?.webContents.send(IpcChannels.WindowMaximizedChanged, mainWindow.isMaximized());
   mainWindow.on('maximize', sendMaximized);
@@ -240,6 +252,11 @@ function registerIpcHandlers(): void {
 
   // ── Auto-update (GitHub releases) ────────────────────────────────────
   ipcMain.handle(IpcChannels.AppVersion, () => app.getVersion());
+
+  ipcMain.handle(
+    IpcChannels.GetReleases,
+    (): Promise<IpcResult<ReleaseInfo[]>> => toResult(() => fetchReleases()),
+  );
 
   ipcMain.handle(
     IpcChannels.UpdateCheck,
