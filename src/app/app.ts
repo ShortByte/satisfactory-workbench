@@ -8,5 +8,5 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
   styleUrl: './app.scss',
 })
 export class App {
-  protected readonly appName = 'Satisfactory Tools';
+  protected readonly appName = 'Satisfactory Workbench';
 }

@@ -30,12 +30,18 @@ let mainWindow: BrowserWindow | null = null;
  */
 let currentSave: SatisfactorySave | null = null;
 
+/** App logo — in dev it lives in public/, in the packaged app in the renderer output. */
+const APP_ICON = app.isPackaged
+  ? resolve(__dirname, '../../dist/satisfactory-tools/browser/logo.png')
+  : resolve(__dirname, '../../public/logo.png');
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     backgroundColor: '#1b1f24',
     show: false,
+    icon: APP_ICON,
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,

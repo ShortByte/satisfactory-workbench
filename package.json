@@ -27,6 +27,7 @@
   "build": {
     "appId": "de.shortbyte.satisfactory-workbench",
     "productName": "Satisfactory Workbench",
+    "icon": "public/logo.png",
     "directories": { "output": "release" },
     "files": [
       "dist-electron/**/*",
