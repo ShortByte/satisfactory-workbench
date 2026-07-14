@@ -18,10 +18,31 @@
     "data:nodes": "node scripts/data/build-node-data.cjs",
     "data:icons": "node scripts/data/download-icons.cjs",
     "data:tiles": "node scripts/data/download-tiles.cjs",
-    "data:all": "npm run data:game && npm run data:nodes && npm run data:icons && npm run data:tiles"
+    "data:all": "npm run data:game && npm run data:nodes && npm run data:icons && npm run data:tiles",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder"
   },
   "private": true,
   "packageManager": "npm@11.13.0",
+  "build": {
+    "appId": "de.shortbyte.satisfactory-workbench",
+    "productName": "Satisfactory Workbench",
+    "directories": { "output": "release" },
+    "files": [
+      "dist-electron/**/*",
+      "dist/satisfactory-tools/browser/**/*",
+      "package.json",
+      "!node_modules/@angular/**",
+      "!node_modules/@types/**",
+      "!node_modules/rxjs/**",
+      "!node_modules/zone.js/**",
+      "!node_modules/leaflet/**",
+      "!node_modules/leaflet.markercluster/**"
+    ],
+    "asar": true,
+    "win": { "target": "nsis" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
+  },
   "dependencies": {
     "@angular/common": "^22.0.0",
     "@angular/compiler": "^22.0.0",
@@ -46,6 +67,7 @@
     "concurrently": "^10.0.3",
     "cross-env": "^10.1.0",
     "electron": "^43.1.0",
+    "electron-builder": "^26.15.3",
     "jsdom": "^28.0.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",

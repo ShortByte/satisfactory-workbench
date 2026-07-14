@@ -138,4 +138,5 @@ Offene, sinnvolle Ausbauten (Priorität grob absteigend):
 3. **Exakter Loop-Solver** — lineares Gleichungssystem statt Kreislauf-Abschneiden.
 4. **Geysir/Fracking eigene Marker**, Gebäude-Icons.
 5. **Randomisierte Saves** — Seed-basierte Node-Daten (falls `mapOptions` gesetzt).
-6. **Packaging** (electron-builder) — beim Packen `public/`-Assets + Daten mitnehmen.
+6. ✅ **Packaging** (electron-builder) — `npm run pack` (entpackt) / `npm run dist`
+   (NSIS-Installer). Config in package.json `build`; App-Icon fehlt noch (Default).

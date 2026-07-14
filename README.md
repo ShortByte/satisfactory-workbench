@@ -44,6 +44,8 @@ Reiter **Karte** / **Calculator**.
 | `npm run web` | Nur Angular-Dev-Server (Browser, ohne Electron-Bridge) |
 | `npm run build` | Production-Build (Angular + Electron) |
 | `npm run electron:compile` | Nur Electron-TypeScript kompilieren |
+| `npm run pack` | Gepackte App (entpackt, ohne Installer) → `release/win-unpacked/` |
+| `npm run dist` | Installierbare App (NSIS-Installer) → `release/` |
 | `npm run data:*` | Gebündelte Spiel-/Karten-Daten neu erzeugen — siehe [scripts/data/](scripts/data/) |
 
 ## Tech-Stack
