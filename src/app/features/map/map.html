@@ -95,20 +95,90 @@
         </div>
       }
 
-      <ul class="legend">
-        @for (entry of categories; track entry[0]) {
-          @if (entry[0] !== 'resourceNode' && entry[0] !== 'extractor' && count(entry[0]) > 0) {
-            <li class="legend__item">
+      @if (structureGroups().length) {
+        <div class="restree">
+          <h3>{{ i18n.t('map.structures') }}</h3>
+          <ul class="restree__list">
+            @for (sc of structureGroups(); track sc.category) {
+              <li>
+                <div class="restree__res">
+                  <button
+                    class="restree__exp"
+                    (click)="toggleCatExpand(sc.category)"
+                    [title]="isCatExpanded(sc.category) ? i18n.t('map.collapse') : i18n.t('map.showTypes')"
+                  >{{ isCatExpanded(sc.category) ? '▾' : '▸' }}</button>
+                  <label>
+                    <input type="checkbox" [checked]="visible()[sc.category]" (change)="toggle(sc.category)" />
+                    <span class="swatch" [style.background]="sc.color"></span>
+                    <span class="restree__label">{{ sc.label }}</span>
+                    <span class="restree__count">{{ sc.total | number }}</span>
+                  </label>
+                </div>
+                @if (isCatExpanded(sc.category)) {
+                  <ul class="restree__pur">
+                    @for (fg of sc.groups; track fg.size) {
+                      <li>
+                        <label>
+                          <input
+                            type="checkbox"
+                            [checked]="structGroupVisible(fg.types)"
+                            (change)="toggleStructureGroup(sc.category, fg.types)"
+                          />
+                          <svg class="fslab" viewBox="0 0 24 16" width="22" height="15" aria-hidden="true">
+                            <rect x="2" [attr.y]="14 - fg.slabH" width="20" [attr.height]="fg.slabH" rx="1" />
+                          </svg>
+                          <span class="restree__label">{{ fg.label }}</span>
+                          <span class="restree__count">{{ fg.count | number }}</span>
+                        </label>
+                      </li>
+                    }
+                  </ul>
+                }
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+      <div class="cattree">
+        @for (sec of legendSections(); track sec.key) {
+          <h4 class="cattree__heading">{{ sec.label }}</h4>
+          @for (g of sec.cats; track g.category) {
+          <div class="cattree__cat">
+            <div class="cattree__row">
+              <button
+                class="cattree__exp"
+                (click)="toggleCatExpand(g.category)"
+                [title]="isCatExpanded(g.category) ? i18n.t('map.collapse') : i18n.t('map.showTypes')"
+              >{{ isCatExpanded(g.category) ? '▾' : '▸' }}</button>
               <label>
-                <input type="checkbox" [checked]="visible()[entry[0]]" (change)="toggle(entry[0])" />
-                <span class="swatch" [style.background]="entry[1].color"></span>
-                <span class="legend__label">{{ i18n.t('cat.' + entry[0]) }}</span>
-                <span class="legend__count">{{ count(entry[0]) | number }}</span>
+                <input type="checkbox" [checked]="visible()[g.category]" (change)="toggle(g.category)" />
+                <span class="swatch" [style.background]="g.color"></span>
+                <span class="cattree__label">{{ g.label }}</span>
+                <span class="cattree__count">{{ g.total | number }}</span>
               </label>
-            </li>
+            </div>
+            @if (isCatExpanded(g.category)) {
+              <ul class="cattree__types">
+                @for (t of g.types; track t.type) {
+                  <li>
+                    <label>
+                      <input
+                        type="checkbox"
+                        [checked]="typeVisible(t.type)"
+                        (change)="toggleType(g.category, t.type)"
+                      />
+                      <span class="cattree__tlabel" [title]="t.type">{{ prettyType(t.type) }}</span>
+                      <span class="cattree__count">{{ t.count | number }}</span>
+                    </label>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
           }
         }
-      </ul>
+      </div>
     }
   </aside>
 

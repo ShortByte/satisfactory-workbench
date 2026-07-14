@@ -55,6 +55,7 @@ export const TRANSLATIONS: Record<string, Entry> = {
   'update.prerelease': { en: 'Pre-release', de: 'Vorabversion' },
   'update.installed': { en: 'Installed version', de: 'Installierte Version' },
   'update.check': { en: 'Check for updates', de: 'Nach Updates suchen' },
+  'update.openLogs': { en: 'Open log folder', de: 'Log-Ordner öffnen' },
   'update.download': { en: 'Download', de: 'Herunterladen' },
   'update.restartInstall': { en: 'Restart & install', de: 'Neustarten & installieren' },
   'update.statusChecking': { en: 'Checking for updates…', de: 'Suche nach Updates…' },
@@ -99,6 +100,11 @@ export const TRANSLATIONS: Record<string, Entry> = {
 
   // ── Common ────────────────────────────────────────────────────────────
   'common.error': { en: 'Error', de: 'Fehler' },
+
+  // ── Error toast / issue reporting ─────────────────────────────────────
+  'err.toastTitle': { en: 'Something went wrong', de: 'Etwas ist schiefgelaufen' },
+  'err.report': { en: 'Report issue', de: 'Problem melden' },
+  'err.dismiss': { en: 'Dismiss', de: 'Schließen' },
 
   // ── Dashboard ─────────────────────────────────────────────────────────
   'dash.openSave': { en: 'Open save file…', de: 'Save-Datei öffnen…' },
@@ -165,6 +171,13 @@ export const TRANSLATIONS: Record<string, Entry> = {
   'map.resources': { en: 'Resources', de: 'Ressourcen' },
   'map.collapse': { en: 'Collapse', de: 'Einklappen' },
   'map.showPurity': { en: 'Show purity', de: 'Reinheit anzeigen' },
+  'map.showTypes': { en: 'Show types', de: 'Typen anzeigen' },
+  'map.otherTypes': { en: 'Other', de: 'Sonstige' },
+  'map.structures': { en: 'Structures', de: 'Bauteile' },
+  'legendGroup.factory': { en: 'Production', de: 'Produktion' },
+  'legendGroup.deposits': { en: 'Deposits & wells', de: 'Vorkommen & Quellen' },
+  'legendGroup.world': { en: 'Creatures & flora', de: 'Kreaturen & Flora' },
+  'legendGroup.misc': { en: 'Other', de: 'Sonstiges' },
   'map.noMapData': { en: 'No map data.', de: 'Keine Kartendaten.' },
   'map.zoomIn': { en: 'Zoom in', de: 'Vergrößern' },
   'map.zoomOut': { en: 'Zoom out', de: 'Verkleinern' },
@@ -189,6 +202,10 @@ export const TRANSLATIONS: Record<string, Entry> = {
   'cat.power': { en: 'Power', de: 'Strom' },
   'cat.logistics': { en: 'Logistics', de: 'Logistik' },
   'cat.storage': { en: 'Storage', de: 'Lager' },
+  'cat.foundation': { en: 'Foundations', de: 'Fundamente' },
+  'cat.wall': { en: 'Walls', de: 'Wände' },
+  'cat.ramp': { en: 'Ramps', de: 'Rampen' },
+  'cat.support': { en: 'Beams & supports', de: 'Träger & Stützen' },
   'cat.vehicle': { en: 'Vehicles', de: 'Fahrzeuge' },
   'cat.creature': { en: 'Creatures', de: 'Kreaturen' },
   'cat.flora': { en: 'Flora/pickups', de: 'Flora/Pickups' },

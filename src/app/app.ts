@@ -4,6 +4,7 @@ import { I18nService } from './i18n/i18n.service';
 import { ServerWatchService } from './core/server-watch.service';
 import { SaveService } from './core/save.service';
 import { UpdateService } from './core/update.service';
+import { ErrorLogService } from './core/error-log.service';
 
 @Component({
   selector: 'app-root',
@@ -17,6 +18,7 @@ export class App {
   protected readonly watch = inject(ServerWatchService);
   protected readonly save = inject(SaveService);
   protected readonly update = inject(UpdateService);
+  protected readonly errorLog = inject(ErrorLogService);
 
   private readonly bridge = typeof window !== 'undefined' ? window.satisfactory : undefined;
   private readonly destroyRef = inject(DestroyRef);
@@ -36,6 +38,13 @@ export class App {
   /** Load the newer save the server watcher has detected. */
   protected loadPending(): void {
     void this.watch.apply();
+  }
+
+  protected reportError(): void {
+    this.errorLog.report();
+  }
+  protected dismissError(): void {
+    this.errorLog.dismiss();
   }
 
   protected downloadUpdate(): void {

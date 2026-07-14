@@ -16,6 +16,8 @@
       {{ i18n.t('update.check') }}
     </button>
 
+    <button class="btn" (click)="openLogs()">{{ i18n.t('update.openLogs') }}</button>
+
     @switch (update.state()) {
       @case ('checking') {
         <span class="up__status">{{ i18n.t('update.statusChecking') }}</span>

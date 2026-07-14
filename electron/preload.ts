@@ -3,7 +3,7 @@ import {
   IpcChannels,
   type BundledSave,
   type IpcResult,
-  type MapFeatureSet,
+  type LogEntry,
   type ReleaseInfo,
   type RemoteSave,
   type SatisfactoryBridge,
@@ -13,6 +13,7 @@ import {
   type SftpConnectionInput,
   type UpdateStatus,
 } from '../src/shared/ipc-types';
+import type { EncodedFeatures } from '../src/shared/feature-codec';
 
 /**
  * Safe, typed bridge exposed to the renderer as `window.satisfactory`.
@@ -58,8 +59,11 @@ const bridge: SatisfactoryBridge = {
     return () => ipcRenderer.removeListener(IpcChannels.UpdateStatus, listener);
   },
 
-  getMapFeatures: (): Promise<IpcResult<MapFeatureSet>> =>
+  getMapFeatures: (): Promise<IpcResult<EncodedFeatures>> =>
     ipcRenderer.invoke(IpcChannels.GetMapFeatures),
+
+  logError: (entry: LogEntry) => ipcRenderer.send(IpcChannels.LogError, entry),
+  openLogFolder: () => ipcRenderer.send(IpcChannels.OpenLogFolder),
 
   windowMinimize: () => ipcRenderer.send(IpcChannels.WindowMinimize),
   windowMaximizeToggle: () => ipcRenderer.send(IpcChannels.WindowMaximizeToggle),

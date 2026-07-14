@@ -2,6 +2,7 @@
  * Shared IPC contract between the Electron main process and the Angular renderer.
  * Keep this file free of any Node- or browser-specific imports so both sides can use it.
  */
+import type { EncodedFeatures } from './feature-codec';
 
 /** IPC channel names, centralised to avoid string drift between main and renderer. */
 export const IpcChannels = {
@@ -28,7 +29,17 @@ export const IpcChannels = {
   WindowClose: 'window:close',
   WindowIsMaximized: 'window:is-maximized',
   WindowMaximizedChanged: 'window:maximized-changed',
+  LogError: 'log:error',
+  OpenLogFolder: 'log:open-folder',
 } as const;
+
+/** An error record forwarded from the renderer to the main-process file logger. */
+export interface LogEntry {
+  /** Where it came from, e.g. "renderer" or "renderer:unhandledrejection". */
+  source: string;
+  message: string;
+  stack?: string;
+}
 
 /**
  * Stable, locale-free error codes thrown by the main process. The renderer maps
@@ -50,6 +61,10 @@ export type FeatureCategory =
   | 'power'
   | 'logistics'
   | 'storage'
+  | 'foundation'
+  | 'wall'
+  | 'ramp'
+  | 'support'
   | 'vehicle'
   | 'creature'
   | 'flora'
@@ -79,6 +94,9 @@ export interface MapFeature {
   purity?: 'pure' | 'normal' | 'impure';
   /** For extractors: clock multiplier (1 = 100 %, 2.5 = 250 %) from the save. */
   clock?: number;
+  /** Footprint size in Unreal units (cm), for structures drawn to scale (e.g. foundations). */
+  sizeX?: number;
+  sizeY?: number;
 }
 
 /** Per-category counts, for building the layer toggle UI. */
@@ -290,10 +308,20 @@ export interface SatisfactoryBridge {
   updateInstall(): void;
   /** Subscribe to update-status pushes; returns an unsubscribe function. */
   onUpdateStatus(cb: (status: UpdateStatus) => void): () => void;
-  /** Extract positioned world features from the currently loaded save. */
-  getMapFeatures(): Promise<IpcResult<MapFeatureSet>>;
+  /**
+   * Extract positioned world features from the currently loaded save, returned in
+   * the columnar {@link EncodedFeatures} wire format. Typed arrays clone across
+   * the contextBridge as fast memcpys (no per-object cloning, no JSON parse),
+   * which keeps very large bases (100k+ objects) responsive. Decode in the renderer.
+   */
+  getMapFeatures(): Promise<IpcResult<EncodedFeatures>>;
 
   // Custom title-bar window controls (the window is frameless).
+  /** Write a renderer-side error to the main-process log file. */
+  logError(entry: LogEntry): void;
+  /** Open the folder that holds the log file in the OS file manager. */
+  openLogFolder(): void;
+
   windowMinimize(): void;
   windowMaximizeToggle(): void;
   windowClose(): void;

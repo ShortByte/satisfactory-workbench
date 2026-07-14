@@ -81,6 +81,11 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
   /** Which resource groups are expanded (to show their purity toggles). */
   protected readonly expanded = signal<Record<string, boolean>>({});
 
+  /** Per-build-type visibility (key = feature type). Missing = visible. Persisted. */
+  protected readonly typeVis = signal<Record<string, boolean>>({});
+  /** Which legend categories are expanded to reveal their per-type sub-toggles. */
+  protected readonly expandedCat = signal<Record<string, boolean>>({});
+
   private static readonly PURITY_ORDER = ['pure', 'normal', 'impure'] as const;
 
   /** Resource groups (nodes + extractors combined) with per-purity counts. */
@@ -116,6 +121,120 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
         })),
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
+  });
+
+  /**
+   * Per-category groups with their build-type breakdown (for the deep legend
+   * filters). Resource nodes + extractors are excluded — they use the resource
+   * tree above. Ordered by the category style order.
+   */
+  protected readonly categoryGroups = computed(() => {
+    const d = this.data();
+    type CatGroup = {
+      category: FeatureCategory;
+      label: string;
+      color: string;
+      total: number;
+      types: { type: string; count: number }[];
+    };
+    if (!d) return [] as CatGroup[];
+    const m = new Map<FeatureCategory, Map<string, number>>();
+    const structureSet = new Set<FeatureCategory>(MapView.STRUCTURE_CATS);
+    for (const f of d.features) {
+      // Resources use the resource tree; foundations/walls/ramps the structure tree.
+      if (f.category === 'resourceNode' || f.category === 'extractor') continue;
+      if (structureSet.has(f.category)) continue;
+      let tm = m.get(f.category);
+      if (!tm) m.set(f.category, (tm = new Map()));
+      tm.set(f.type, (tm.get(f.type) ?? 0) + 1);
+    }
+    return this.categories
+      .filter(([c]) => m.has(c))
+      .map(([c, s]) => {
+        const tm = m.get(c)!;
+        const types = [...tm.entries()]
+          .map(([type, count]) => ({ type, count }))
+          .sort((a, b) => b.count - a.count);
+        return {
+          category: c,
+          label: this.i18n.t(`cat.${c}`),
+          color: s.color,
+          total: types.reduce((sum, t) => sum + t.count, 0),
+          types,
+        };
+      });
+  });
+
+  /** Building categories shown together in the dedicated "structures" tree. */
+  private static readonly STRUCTURE_CATS: FeatureCategory[] = ['foundation', 'wall', 'ramp'];
+
+  /** Logical grouping of the remaining categories into labelled legend sections. */
+  private static readonly LEGEND_GROUPS: { key: string; cats: FeatureCategory[] }[] = [
+    { key: 'factory', cats: ['production', 'power', 'logistics', 'storage'] },
+    { key: 'deposits', cats: ['geyser', 'fracking', 'resourceDeposit'] },
+    { key: 'world', cats: ['creature', 'flora'] },
+    { key: 'misc', cats: ['support', 'vehicle', 'player', 'other'] },
+  ];
+
+  /** The general legend split into labelled sections (empty sections dropped). */
+  protected readonly legendSections = computed(() => {
+    const byCat = new Map(this.categoryGroups().map((g) => [g.category, g]));
+    const assigned = new Set<FeatureCategory>();
+    const sections = MapView.LEGEND_GROUPS.map((sec) => {
+      const cats = sec.cats
+        .map((c) => byCat.get(c))
+        .filter((g): g is NonNullable<typeof g> => !!g);
+      cats.forEach((g) => assigned.add(g.category));
+      return { key: sec.key, label: this.i18n.t(`legendGroup.${sec.key}`), cats };
+    });
+    // Any category not placed in a group falls into "misc" so nothing is hidden.
+    const leftover = this.categoryGroups().filter((g) => !assigned.has(g.category));
+    if (leftover.length) sections.find((s) => s.key === 'misc')!.cats.push(...leftover);
+    return sections.filter((s) => s.cats.length > 0);
+  });
+
+  /**
+   * Foundations / walls / ramps as one tree section (like the resource tree):
+   * each category expands to size groups (8x1/8x2/8x4 …), merging all material
+   * tones. Each group carries its member type names so one toggle flips them all.
+   */
+  protected readonly structureGroups = computed(() => {
+    const d = this.data();
+    type SizeGroup = { size: string; label: string; count: number; types: string[]; slabH: number };
+    type StructGroup = { category: FeatureCategory; label: string; color: string; total: number; groups: SizeGroup[] };
+    if (!d) return [] as StructGroup[];
+
+    const per = new Map<FeatureCategory, { total: number; sizes: Map<string, { count: number; types: Set<string> }> }>();
+    for (const c of MapView.STRUCTURE_CATS) per.set(c, { total: 0, sizes: new Map() });
+    for (const f of d.features) {
+      const entry = per.get(f.category);
+      if (!entry) continue;
+      entry.total++;
+      const size = /_(\d+x\d+)/.exec(f.type)?.[1] ?? 'misc';
+      let g = entry.sizes.get(size);
+      if (!g) entry.sizes.set(size, (g = { count: 0, types: new Set() }));
+      g.count++;
+      g.types.add(f.type);
+    }
+
+    return MapView.STRUCTURE_CATS.filter((c) => (per.get(c)?.total ?? 0) > 0).map((c) => {
+      const entry = per.get(c)!;
+      return {
+        category: c,
+        label: this.i18n.t(`cat.${c}`),
+        color: CATEGORY_STYLES[c].color,
+        total: entry.total,
+        groups: [...entry.sizes.entries()]
+          .map(([size, g]) => ({
+            size,
+            label: size === 'misc' ? this.i18n.t('map.otherTypes') : size.replace('x', '×'),
+            count: g.count,
+            types: [...g.types],
+            slabH: Math.min(13, Math.round(3 + (Number(size.split('x')[1]) || 1) * 2.3)),
+          }))
+          .sort((a, b) => a.size.localeCompare(b.size)),
+      };
+    });
   });
 
   /** Reference point (game cm) set by clicking the map — for nearest-source search. */
@@ -178,6 +297,7 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
     effect(() => {
       this.visible();
       this.resourceVis();
+      this.typeVis();
       this.saveFilters();
     });
     // Draw animated lines from the reference point to the nearest sources.
@@ -210,9 +330,11 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
       const saved = JSON.parse(raw) as {
         visible?: Record<string, boolean>;
         resourceVis?: Record<string, boolean>;
+        typeVis?: Record<string, boolean>;
       };
       if (saved.visible) this.visible.update((v) => ({ ...v, ...saved.visible }));
       if (saved.resourceVis) this.resourceVis.set(saved.resourceVis);
+      if (saved.typeVis) this.typeVis.set(saved.typeVis);
     } catch {
       /* ignore corrupt/unavailable storage */
     }
@@ -222,7 +344,11 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
     try {
       localStorage.setItem(
         MapView.STORAGE_KEY,
-        JSON.stringify({ visible: this.visible(), resourceVis: this.resourceVis() }),
+        JSON.stringify({
+          visible: this.visible(),
+          resourceVis: this.resourceVis(),
+          typeVis: this.typeVis(),
+        }),
       );
     } catch {
       /* ignore */
@@ -317,6 +443,22 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
     this.map?.flyTo(latlng, Math.max(this.map.getZoom(), SF_MAP.maxNativeZoom), { duration: 0.6 });
   }
 
+  /** Four corners of a structure's footprint (game cm), rotated by its yaw. */
+  private footprintCorners(f: MapFeature): L.LatLngExpression[] {
+    const halfW = (f.sizeX ?? 800) / 2;
+    const halfL = (f.sizeY ?? 800) / 2;
+    const yaw = ((f.rot ?? 0) * Math.PI) / 180;
+    const cos = Math.cos(yaw);
+    const sin = Math.sin(yaw);
+    const local: [number, number][] = [
+      [-halfW, -halfL],
+      [halfW, -halfL],
+      [halfW, halfL],
+      [-halfW, halfL],
+    ];
+    return local.map(([dx, dy]) => gameToLatLng(f.x + dx * cos - dy * sin, f.y + dx * sin + dy * cos));
+  }
+
   /** Human-readable distance. */
   protected fmtDistance(m: number): string {
     return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
@@ -346,6 +488,49 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
     const next = { ...this.visible(), [cat]: !this.visible()[cat] };
     this.visible.set(next);
     this.syncLayerVisibility();
+  }
+
+  /** Is a single build type currently shown? (missing key = shown) */
+  protected typeVisible(type: string): boolean {
+    return this.typeVis()[type] !== false;
+  }
+
+  /** Toggle one build type within a category and rebuild that category's layer. */
+  protected toggleType(cat: FeatureCategory, type: string): void {
+    const cur = this.typeVis();
+    this.typeVis.set({ ...cur, [type]: cur[type] === false });
+    this.rebuildCategory(cat);
+  }
+
+  /** A size group is shown if any of its member types is visible. */
+  protected structGroupVisible(types: string[]): boolean {
+    const tv = this.typeVis();
+    return types.some((t) => tv[t] !== false);
+  }
+
+  /** Toggle a whole size group (all its material variants) and rebuild its layer. */
+  protected toggleStructureGroup(cat: FeatureCategory, types: string[]): void {
+    const turnOff = this.structGroupVisible(types);
+    const next = { ...this.typeVis() };
+    for (const t of types) {
+      if (turnOff) next[t] = false;
+      else delete next[t];
+    }
+    this.typeVis.set(next);
+    this.rebuildCategory(cat);
+  }
+
+  protected isCatExpanded(cat: FeatureCategory): boolean {
+    return this.expandedCat()[cat] === true;
+  }
+
+  protected toggleCatExpand(cat: FeatureCategory): void {
+    this.expandedCat.update((e) => ({ ...e, [cat]: !e[cat] }));
+  }
+
+  /** Human-friendly build-type name (drops the "Build_" prefix, spaces underscores). */
+  protected prettyType(type: string): string {
+    return type.replace(/^Build_/, '').replace(/_/g, ' ');
   }
 
   /** Is a resource+purity currently shown? (missing key = shown) */
@@ -456,9 +641,11 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
     // Nodes + extractors are filtered by the unified resource:purity visibility.
     const resourceFiltered = cat === 'resourceNode' || cat === 'extractor';
     const vis = resourceFiltered ? this.resourceVis() : null;
+    const tvis = this.typeVis();
 
     for (const f of this.grouped.get(cat) ?? []) {
       if (vis && f.resource && vis[`${f.resource}:${f.purity ?? 'normal'}`] === false) continue;
+      if (tvis[f.type] === false) continue;
 
       const latlng = gameToLatLng(f.x, f.y);
       let marker: L.Layer;
@@ -471,6 +658,15 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
         marker = L.marker(latlng, { icon: extractorMarker(f.resource), riseOnHover: true });
       } else if (cat === 'fracking' && f.resource) {
         marker = L.marker(latlng, { icon: wellMarker(f.resource), riseOnHover: true });
+      } else if (f.sizeX && f.sizeY) {
+        // Draw the structure (plate/ramp/wall) to its real footprint (scales with zoom).
+        marker = L.polygon(this.footprintCorners(f), {
+          renderer: this.canvasRenderer,
+          color: style.color,
+          weight: 1,
+          fillColor: style.color,
+          fillOpacity: 0.28,
+        });
       } else if (useIcon) {
         marker = L.marker(latlng, { icon: markerIcon(cat), riseOnHover: true });
       } else {

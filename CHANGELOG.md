@@ -2,6 +2,24 @@
 
 All notable changes to **Satisfactory Workbench** are documented here.
 
+## 0.1.2
+
+### 🗺️ Much more detailed map
+- Shows the whole build: **foundations, walls, ramps and beams** are now included (read from the 1.0 "lightweight buildables" store).
+- Structures are drawn **to scale**: foundations/ramps as real 8×8 plates, walls as correctly-oriented bars — zoom in to see your factory's floor plan.
+- Reworked sidebar: **Resources**, a dedicated **Structures** section (foundations/walls/ramps grouped by size, with icons), and the rest sorted into logical groups (Production, Deposits, Creatures & flora, …).
+- **Deep filters:** expand any category to toggle individual build types; everything is remembered.
+
+### ⚡ Performance
+- Map data is transferred in a compact **binary format**, so even very large bases load quickly instead of hanging.
+
+### 🧭 Interface
+- The top **navigation stays fixed** while pages scroll.
+
+### 🛟 Diagnostics
+- **Error logging to a file** (renderer + main process), with an **"Open log folder"** button on the Updates page.
+- On an error, a toast offers **one-click "Report issue"** that opens a pre-filled GitHub issue with the details.
+
 ## 0.1.1 — First release 🎉
 
 The desktop companion for **Satisfactory**: explore your saves on an interactive map and plan factories with a production calculator that knows your world's resources. A standalone Windows app — fully available in **English and German**.

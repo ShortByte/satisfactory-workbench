@@ -1,7 +1,7 @@
 :host {
   display: block;
-  /* Fill the viewport below the fixed topbar, independent of the flex chain. */
-  height: calc(100vh - var(--topbar-h));
+  /* Fill the scrollable content area (the app shell already reserves the topbar). */
+  height: 100%;
 }
 
 .map-page {
@@ -95,22 +95,84 @@
 }
 .link { color: var(--accent); font-size: 0.85rem; }
 
-.legend {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+/* Deep category legend: per-category toggle + expandable per-type sub-toggles. */
+.cattree {
+  &__heading {
+    margin: 0.7rem 0 0.2rem;
+    font-size: 0.72rem;
+    font-family: var(--font-display);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
 
-  &__item label {
+  &__row {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.2rem 0;
+    gap: 0.15rem;
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1;
+      padding: 0.2rem 0;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+  }
+
+  &__exp {
+    border: none;
+    background: none;
+    color: var(--muted);
     cursor: pointer;
-    font-size: 0.85rem;
+    width: 16px;
+    font-size: 0.7rem;
+    padding: 0;
+    &:hover { color: var(--text); }
   }
 
   &__label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   &__count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.78rem; }
+
+  &__types {
+    list-style: none;
+    margin: 0 0 0.25rem;
+    padding: 0 0 0 1.8rem;
+    border-left: 1px solid var(--border);
+    margin-left: 0.75rem;
+    max-height: 260px;
+    overflow-y: auto;
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.1rem 0;
+      cursor: pointer;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+  }
+
+  &__tlabel {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+  }
+}
+
+/* Generated foundation "image": a slab whose thickness reflects the size (1/2/4 m). */
+.fslab {
+  flex: 0 0 auto;
+  rect {
+    fill: #9aa7b3;
+    stroke: #6b7682;
+    stroke-width: 1;
+  }
 }
 
 .swatch {

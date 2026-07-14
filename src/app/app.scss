@@ -1,12 +1,14 @@
 :host {
   display: block;
-  min-height: 100vh;
+  /* Bound to the viewport so the title bar stays fixed and only .content scrolls. */
+  height: 100vh;
+  overflow: hidden;
 }
 
 .shell {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100%;
 }
 
 /* ── Custom title bar (frameless window) ───────────────────────────── */
@@ -260,4 +262,64 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+}
+
+/* Global error toast — appears bottom-right on any uncaught error */
+.errtoast {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1000;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  background: linear-gradient(180deg, #2a1d1d 0%, #211a1a 100%);
+  border: 1px solid var(--danger);
+  border-left: 3px solid var(--danger);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+
+  &__title {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #ffb4ab;
+  }
+  &__msg {
+    margin: 0.25rem 0 0;
+    font-size: 0.82rem;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+  }
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+  &__btn {
+    border: 1px solid var(--border-bright);
+    background: transparent;
+    color: var(--text);
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+
+    &:hover { background: rgba(255, 255, 255, 0.08); }
+    &--primary {
+      border-color: var(--accent);
+      background: rgba(247, 145, 58, 0.16);
+      color: var(--accent-bright);
+      font-weight: 600;
+      &:hover { background: rgba(247, 145, 58, 0.28); }
+    }
+  }
 }

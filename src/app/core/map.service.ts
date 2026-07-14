@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { IpcErrorCode } from '../../shared/ipc-types';
 import type { FeatureCategory, MapFeatureSet } from '../../shared/ipc-types';
+import { decodeFeatures } from '../../shared/feature-codec';
 import { I18nService } from '../i18n/i18n.service';
 
 /** Renderer-only sentinel: the Electron bridge is absent (plain browser). */
@@ -35,6 +36,10 @@ export const CATEGORY_STYLES: Record<FeatureCategory, CategoryStyle> = {
   power: { color: '#ffeb3b', radius: 2, visible: false },
   logistics: { color: '#03a9f4', radius: 1.5, visible: false },
   storage: { color: '#8d6e63', radius: 3, visible: true },
+  foundation: { color: '#9aa7b3', radius: 1.5, visible: false },
+  wall: { color: '#7d8b99', radius: 1.5, visible: false },
+  ramp: { color: '#8a99a6', radius: 1.5, visible: false },
+  support: { color: '#6b7682', radius: 1.5, visible: false },
   vehicle: { color: '#ff9800', radius: 3, visible: true },
   creature: { color: '#e91e63', radius: 1.5, visible: false },
   flora: { color: '#7cb342', radius: 1.5, visible: false },
@@ -109,7 +114,7 @@ export class MapService {
     try {
       const res = await this.bridge.getMapFeatures();
       if (!res.ok) throw new Error(res.error);
-      this._data.set(res.data);
+      this._data.set(decodeFeatures(res.data));
     } catch (err) {
       this._error.set(err instanceof Error ? err.message : String(err));
     } finally {

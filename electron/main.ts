@@ -7,7 +7,7 @@ import {
   IpcErrorCode,
   type BundledSave,
   type IpcResult,
-  type MapFeatureSet,
+  type LogEntry,
   type ReleaseInfo,
   type RemoteSave,
   type SaveLocation,
@@ -17,6 +17,8 @@ import {
 } from '../src/shared/ipc-types';
 import { parseSaveFile } from './save-service';
 import { extractMapFeatures } from './map-service';
+import { encodeFeatures, type EncodedFeatures } from '../src/shared/feature-codec';
+import { initErrorLogging, logDirectory, logError } from './logger';
 import { discoverSaveLocations } from './save-locations';
 import { addConnection, listConnections, removeConnection } from './sftp-config';
 import { downloadRemoteSave, listRemoteSaves, testConnection } from './sftp-service';
@@ -85,9 +87,10 @@ function createWindow(): void {
   mainWindow.webContents.on('did-finish-load', () =>
     console.log('[main] renderer loaded:', mainWindow?.webContents.getURL()),
   );
-  mainWindow.webContents.on('did-fail-load', (_e, code, desc, url) =>
-    console.error('[main] renderer failed to load:', code, desc, url),
-  );
+  mainWindow.webContents.on('did-fail-load', (_e, code, desc, url) => {
+    console.error('[main] renderer failed to load:', code, desc, url);
+    logError('main:did-fail-load', `${code} ${desc} (${url})`);
+  });
   // Surface renderer warnings/errors in the dev terminal (level 2=warning, 3=error).
   // Electron 43 passes a MessageDetails object as the second arg; cast defensively
   // since the typings still carry the deprecated (event, level, message) overload.
@@ -148,10 +151,12 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle(
     IpcChannels.GetMapFeatures,
-    (): Promise<IpcResult<MapFeatureSet>> =>
+    (): Promise<IpcResult<EncodedFeatures>> =>
       toResult(async () => {
         if (!currentSave) throw new Error(IpcErrorCode.NoSaveLoaded);
-        return extractMapFeatures(currentSave);
+        // Columnar typed-array format, not the object array: huge feature sets
+        // transfer far faster across the contextBridge (memcpy, no JSON parse).
+        return encodeFeatures(extractMapFeatures(currentSave));
       }),
   );
 
@@ -281,6 +286,12 @@ function registerIpcHandlers(): void {
   );
   ipcMain.on(IpcChannels.UpdateInstall, () => quitAndInstall());
 
+  // ── Error logging ────────────────────────────────────────────────────
+  ipcMain.on(IpcChannels.LogError, (_evt, entry: LogEntry) => {
+    logError(entry.source, entry.message, entry.stack);
+  });
+  ipcMain.on(IpcChannels.OpenLogFolder, () => void shell.openPath(logDirectory()));
+
   // Custom title-bar window controls.
   ipcMain.on(IpcChannels.WindowMinimize, () => mainWindow?.minimize());
   ipcMain.on(IpcChannels.WindowMaximizeToggle, () => {
@@ -294,6 +305,7 @@ function registerIpcHandlers(): void {
 
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null); // no default Electron menu bar
+  initErrorLogging();
   registerIpcHandlers();
   createWindow();
   initAutoUpdater(() => mainWindow);

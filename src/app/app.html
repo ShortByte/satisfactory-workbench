@@ -114,4 +114,19 @@
   <main class="content">
     <router-outlet />
   </main>
+
+  @if (errorLog.current(); as e) {
+    <div class="errtoast" role="alert">
+      <div class="errtoast__text">
+        <strong class="errtoast__title">⚠ {{ i18n.t('err.toastTitle') }}</strong>
+        <p class="errtoast__msg" [title]="e.message">{{ e.message }}</p>
+      </div>
+      <div class="errtoast__actions">
+        <button class="errtoast__btn errtoast__btn--primary" (click)="reportError()">
+          {{ i18n.t('err.report') }}
+        </button>
+        <button class="errtoast__btn" (click)="dismissError()">{{ i18n.t('err.dismiss') }}</button>
+      </div>
+    </div>
+  }
 </div>

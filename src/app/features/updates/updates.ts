@@ -96,6 +96,10 @@ export class UpdatesPage implements OnInit {
     }
   }
 
+  protected openLogs(): void {
+    window.satisfactory?.openLogFolder();
+  }
+
   protected checkUpdate(): void {
     this.update.check();
   }

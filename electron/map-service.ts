@@ -7,6 +7,20 @@ import type {
 } from '../src/shared/ipc-types';
 import { RESOURCE_NODES, RESOURCE_WELLS, type RefPurity } from './data/resource-nodes';
 
+/** Shape of the FGLightweightBuildableSubsystem's parsed special properties. */
+interface LightweightSpecialProps {
+  type?: string;
+  buildables?: Array<{
+    typeReference?: { pathName?: string };
+    instances?: Array<{
+      transform?: {
+        translation?: { x: number; y: number; z: number };
+        rotation?: { x: number; y: number; z: number; w: number };
+      };
+    }>;
+  }>;
+}
+
 /** Spatial grid over the reference nodes for fast nearest-match by position. */
 const NODE_CELL = 20000; // cm
 type RefEntry = { resource: string; purity: RefPurity; x: number; y: number };
@@ -70,6 +84,10 @@ const CATEGORIES: FeatureCategory[] = [
   'power',
   'logistics',
   'storage',
+  'foundation',
+  'wall',
+  'ramp',
+  'support',
   'vehicle',
   'creature',
   'flora',
@@ -116,6 +134,18 @@ const RULES: Array<{ category: FeatureCategory; test: RegExp }> = [
     test: /(BerryBush|NutBush|Shroom|Crystal|PowerSlug|Pickup|BP_WAT|Mycelia|Flower|BP_Nut|BP_Berry)/,
   },
   { category: 'player', test: /(Char_Player|FGPlayer|PlayerState|Character\/Player)/ },
+  // Structural build pieces, split into individually toggleable layers. Kept last
+  // so machines/logistics/power win first; these only catch raw structure.
+  // Passthroughs first — they carry "Foundation" but aren't plates.
+  { category: 'support', test: /Build_(FoundationPassthrough|Passthrough)/ },
+  // Broad match so material variants are caught too (e.g. Foundation_Concrete_8x1).
+  { category: 'foundation', test: /Build_Foundation/ },
+  { category: 'ramp', test: /Build_Ramp/ },
+  { category: 'wall', test: /Build_(Wall|Gate|DoorFrame|BigGarageDoor)/ },
+  {
+    category: 'support',
+    test: /Build_(Beam|Pillar|Frame|Catwalk|Stair|Ladder|QuarterPipe|Fence|Railing|Walkway|Roof|Barrier)/,
+  },
 ];
 
 function classify(typePath: string): FeatureCategory {
@@ -135,6 +165,18 @@ function shortType(typePath: string): string {
 function shortId(instanceName: string): string {
   const afterDot = instanceName.split('.').pop() ?? instanceName;
   return afterDot;
+}
+
+/** Footprint size (cm) for a scaled structure, or null if it isn't drawn to scale. */
+function structureSize(category: FeatureCategory, type: string): { sizeX: number; sizeY: number } | null {
+  if (category !== 'foundation' && category !== 'ramp' && category !== 'wall') return null;
+  const m = /_(\d+)x\d+/.exec(type);
+  if (!m) return null;
+  const long = parseInt(m[1], 10) * 100; // metres → cm
+  // Walls run along the local Y axis at yaw 0 (verified against save data): long
+  // on Y, thin on X. Foundations/ramps are square.
+  if (category === 'wall') return { sizeX: 100, sizeY: long };
+  return { sizeX: long, sizeY: long };
 }
 
 /** Yaw (degrees) around the Z axis from a rotation quaternion (x,y,z,w). */
@@ -265,6 +307,12 @@ export function extractMapFeatures(save: SatisfactorySave): MapFeatureSet {
         }
       }
 
+      const sz = structureSize(category, feature.type);
+      if (sz) {
+        feature.sizeX = sz.sizeX;
+        feature.sizeY = sz.sizeY;
+      }
+
       if (category === 'fracking' && /FrackingCore/.test(entity.typePath)) {
         // Type the well core (oil / nitrogen / water) via the reference wells.
         const resource = matchWell(t.x, t.y);
@@ -295,6 +343,52 @@ export function extractMapFeatures(save: SatisfactorySave): MapFeatureSet {
       maxX = Math.max(maxX, feature.x);
       minY = Math.min(minY, feature.y);
       maxY = Math.max(maxY, feature.y);
+    }
+  }
+
+  // Lightweight buildables: since Satisfactory 1.0, simple structures (foundations,
+  // walls, ramps, pillars, roofs, …) are stored in bulk inside the
+  // FGLightweightBuildableSubsystem instead of as individual objects.
+  let lwIndex = 0;
+  for (const level of Object.values(save.levels)) {
+    for (const obj of level.objects ?? []) {
+      const sp = (obj as { specialProperties?: LightweightSpecialProps }).specialProperties;
+      if (sp?.type !== 'BuildableSubsystemSpecialProperties' || !Array.isArray(sp.buildables)) {
+        continue;
+      }
+      for (const group of sp.buildables) {
+        const typePath = group.typeReference?.pathName ?? '';
+        if (!typePath) continue;
+        const category = classify(typePath);
+        const type = shortType(typePath);
+        const sz = structureSize(category, type);
+        for (const inst of group.instances ?? []) {
+          const t = inst.transform?.translation;
+          if (!t || typeof t.x !== 'number') continue;
+          counts[category]++;
+
+          const feature: MapFeature = {
+            id: `lw${lwIndex++}`,
+            category,
+            type,
+            x: Math.round(t.x),
+            y: Math.round(t.y),
+            z: Math.round(t.z),
+          };
+          const rot = inst.transform?.rotation;
+          if (rot && typeof rot.w === 'number') feature.rot = Math.round(yawDegrees(rot));
+          if (sz) {
+            feature.sizeX = sz.sizeX;
+            feature.sizeY = sz.sizeY;
+          }
+
+          features.push(feature);
+          minX = Math.min(minX, feature.x);
+          maxX = Math.max(maxX, feature.x);
+          minY = Math.min(minY, feature.y);
+          maxY = Math.max(maxY, feature.y);
+        }
+      }
     }
   }
 
