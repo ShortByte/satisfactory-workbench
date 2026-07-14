@@ -9,6 +9,7 @@ import {
   descToNodeKey,
   extractorProduction,
   resourceAvailability,
+  wellCount,
   type ResourceAvailability,
 } from './world-availability';
 
@@ -61,6 +62,7 @@ export class Calculator {
         enough: boolean;
         extractingRate: number;
         extractingCount: number;
+        wells: number;
       })[]
     | null
   >(() => {
@@ -71,14 +73,16 @@ export class Calculator {
       const key = descToNodeKey(raw.item);
       const avail = resourceAvailability(data.features, key);
       const prod = extractorProduction(data.features, key);
+      const wells = wellCount(data.features, key);
       return {
         ...avail,
         name: raw.name,
         icon: this.calc.iconUrl(raw.item),
         needed: raw.rate,
-        enough: avail.maxRate >= raw.rate,
+        enough: avail.maxRate >= raw.rate || (!avail.hasNodes && wells > 0),
         extractingRate: prod.rate,
         extractingCount: prod.count,
+        wells,
       };
     });
   });

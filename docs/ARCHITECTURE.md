@@ -61,6 +61,12 @@ die bounds direkt in Spielkoordinaten adressiert.
 - Offline dekodiert nach `electron/data/resource-nodes.ts` (459 Nodes,
   `[resource, purity, x, y, z]`).
 
+**Wells:** `RESOURCE_WELLS` (Öl/Stickstoff/Wasser, 17 Stück) im selben Datenmodul.
+`map-service.ts` matcht `BP_FrackingCore`-Positionen (`matchWell`, 17/17 exakt) →
+`feature.resource`. Karte: Well-Cores mit Ressourcen-Icon (türkiser Ring,
+`wellMarker`), Satelliten bleiben generisch. Calculator: `wellCount` schließt die
+„keine Node-Daten"-Lücke für Stickstoff/Wasser.
+
 **Matching:** `map-service.ts` baut ein Spatial-Grid und matcht jeden Save-Node
 per Position (`matchNode`, 4 m Toleranz) → Ressource + Reinheit. Occupied Nodes
 (mit Extraktor darauf) werden unterdrückt (`occupiedSources`), damit kein

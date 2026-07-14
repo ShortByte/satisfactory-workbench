@@ -24,6 +24,7 @@ import {
   markerIcon,
   nodeMarker,
   resourceIconUrl,
+  wellMarker,
 } from './marker-icons';
 
 /** One nearest free node found from the reference point. */
@@ -452,6 +453,8 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
         });
       } else if (cat === 'extractor' && f.resource) {
         marker = L.marker(latlng, { icon: extractorMarker(f.resource), riseOnHover: true });
+      } else if (cat === 'fracking' && f.resource) {
+        marker = L.marker(latlng, { icon: wellMarker(f.resource), riseOnHover: true });
       } else if (useIcon) {
         marker = L.marker(latlng, { icon: markerIcon(cat), riseOnHover: true });
       } else {

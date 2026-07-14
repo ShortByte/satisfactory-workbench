@@ -107,6 +107,22 @@ export function nodeMarker(resourceKey: string, purity: string): L.DivIcon {
   return icon;
 }
 
+/** Resource-well marker (fracking core): resource icon in a teal-ringed badge. */
+export function wellMarker(resourceKey: string): L.DivIcon {
+  const key = `well:${resourceKey}`;
+  const cached = imgIconCache.get(key);
+  if (cached) return cached;
+  const icon = L.divIcon({
+    html: `<img src="${resourceIconUrl(resourceKey)}" alt="" draggable="false">`,
+    className: 'sf-imgmk sf-well',
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+    popupAnchor: [0, -13],
+  });
+  imgIconCache.set(key, icon);
+  return icon;
+}
+
 /** Extractor marker: resource icon in an "active" (accent) square badge. */
 export function extractorMarker(resourceKey: string): L.DivIcon {
   const key = `ext:${resourceKey}`;

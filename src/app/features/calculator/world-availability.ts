@@ -30,6 +30,15 @@ const EXTRACTOR_BASE: Record<string, number> = {
 };
 const PURITY_FACTOR: Record<string, number> = { impure: 0.5, normal: 1, pure: 2 };
 
+/** Number of resource wells (fracking cores) for a resource in the world. */
+export function wellCount(features: readonly MapFeature[], resourceKey: string): number {
+  let n = 0;
+  for (const f of features) {
+    if (f.category === 'fracking' && f.resource === resourceKey) n++;
+  }
+  return n;
+}
+
 /**
  * Actual production of the player's placed extractors for a resource, using each
  * extractor's building tier, node purity and clock (overclock) from the save.

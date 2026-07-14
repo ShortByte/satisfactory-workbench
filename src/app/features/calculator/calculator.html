@@ -170,7 +170,15 @@
                       <span class="muted">—</span>
                     }
                   </td>
-                  <td class="num">{{ a.freeNodes }}</td>
+                  <td class="num">
+                    @if (a.hasNodes) {
+                      {{ a.freeNodes }}
+                    } @else if (a.wells > 0) {
+                      <span class="muted">{{ a.wells }} Wells</span>
+                    } @else {
+                      <span class="muted">—</span>
+                    }
+                  </td>
                   <td>
                     @if (a.hasNodes) {
                       {{ a.byPurity.impure }} / {{ a.byPurity.normal }} / {{ a.byPurity.pure }}
@@ -180,12 +188,16 @@
                   </td>
                   <td class="num">{{ a.hasNodes ? (a.maxRate | number: '1.0-0') : '—' }}</td>
                   <td>
-                    @if (!a.hasNodes) {
-                      <span class="muted">keine Node-Daten</span>
-                    } @else if (a.enough) {
-                      <span class="ok">✓ reicht</span>
+                    @if (a.hasNodes) {
+                      @if (a.enough) {
+                        <span class="ok">✓ reicht</span>
+                      } @else {
+                        <span class="bad">⚠ zu wenig</span>
+                      }
+                    } @else if (a.wells > 0) {
+                      <span class="ok">✓ aus Wells</span>
                     } @else {
-                      <span class="bad">⚠ zu wenig</span>
+                      <span class="muted">keine Node-Daten</span>
                     }
                   </td>
                 </tr>

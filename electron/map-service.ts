@@ -5,7 +5,7 @@ import type {
   MapFeature,
   MapFeatureSet,
 } from '../src/shared/ipc-types';
-import { RESOURCE_NODES, type RefPurity } from './data/resource-nodes';
+import { RESOURCE_NODES, RESOURCE_WELLS, type RefPurity } from './data/resource-nodes';
 
 /** Spatial grid over the reference nodes for fast nearest-match by position. */
 const NODE_CELL = 20000; // cm
@@ -16,6 +16,25 @@ for (const [resource, purity, x, y] of RESOURCE_NODES) {
   const cell = nodeGrid.get(key);
   if (cell) cell.push({ resource, purity, x, y });
   else nodeGrid.set(key, [{ resource, purity, x, y }]);
+}
+
+/** Reference wells (fracking cores) — few of them, so a flat list is fine. */
+const WELLS: { resource: string; x: number; y: number }[] = RESOURCE_WELLS.map(
+  ([resource, x, y]) => ({ resource, x, y }),
+);
+
+/** Resource of the well nearest to (x, y) within ~5 m, if any. */
+function matchWell(x: number, y: number): string | undefined {
+  let best: string | undefined;
+  let bestD = 500 * 500;
+  for (const w of WELLS) {
+    const d = (w.x - x) ** 2 + (w.y - y) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      best = w.resource;
+    }
+  }
+  return best;
 }
 
 /** Find the reference node nearest to (x, y) within ~4 m, if any. */
@@ -244,6 +263,12 @@ export function extractMapFeatures(save: SatisfactorySave): MapFeatureSet {
           feature.resource = m.resource;
           feature.purity = m.purity;
         }
+      }
+
+      if (category === 'fracking' && /FrackingCore/.test(entity.typePath)) {
+        // Type the well core (oil / nitrogen / water) via the reference wells.
+        const resource = matchWell(t.x, t.y);
+        if (resource) feature.resource = resource;
       }
 
       if (category === 'extractor') {
