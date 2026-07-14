@@ -1,7 +1,12 @@
 {
-  "name": "satisfactory-tools",
-  "version": "0.1.0",
+  "name": "satisfactory-workbench",
+  "version": "0.1.1",
+  "description": "Desktop companion for Satisfactory: browse save games on an interactive map and plan factories with a production calculator that reads your world's resource nodes. Loads local Steam/Epic saves and dedicated-server saves over SFTP.",
   "main": "dist-electron/electron/main.js",
+  "author": {
+    "name": "Leon Enneken",
+    "email": "contact@shortbyte.de"
+  },
   "scripts": {
     "ng": "ng",
     "web": "ng serve --port 4200",
@@ -21,7 +26,8 @@
     "data:icon": "node scripts/data/build-app-icon.cjs",
     "data:all": "npm run data:game && npm run data:nodes && npm run data:icons && npm run data:tiles && npm run data:icon",
     "pack": "npm run build && electron-builder --dir",
-    "dist": "npm run build && electron-builder"
+    "dist": "npm run build && electron-builder",
+    "release": "npm run build && electron-builder --publish always"
   },
   "private": true,
   "packageManager": "npm@11.13.0",
@@ -50,7 +56,14 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ShortByte",
+        "repo": "satisfactory-workbench"
+      }
+    ]
   },
   "dependencies": {
     "@angular/common": "^22.0.0",
@@ -61,6 +74,7 @@
     "@angular/router": "^22.0.0",
     "@etothepii/satisfactory-file-parser": "^4.1.1",
     "@types/leaflet": "^1.9.21",
+    "electron-updater": "^6.8.9",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
     "rxjs": "~7.8.0",

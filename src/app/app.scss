@@ -148,6 +148,51 @@
   .newsave { animation: none; }
 }
 
+/* Auto-update indicator (available → downloading → restart) */
+.update {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  align-self: center;
+  margin-right: 0.5rem;
+  padding: 0.28rem 0.7rem;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--border-bright);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+
+  &:hover { background: rgba(255, 255, 255, 0.09); border-color: var(--accent); }
+  &:focus { outline: none; }
+  &:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  svg { flex: 0 0 auto; }
+
+  &--progress {
+    cursor: default;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    &:hover { background: rgba(255, 255, 255, 0.04); border-color: var(--border-bright); }
+  }
+  &--ready {
+    border-color: var(--accent);
+    background: rgba(247, 145, 58, 0.16);
+    color: var(--accent-bright);
+    animation: newsave-pulse 2s ease-in-out infinite;
+    &:hover { background: rgba(247, 145, 58, 0.28); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .update--ready { animation: none; }
+}
+
 /* Language switcher — compact segmented control */
 .lang {
   display: flex;

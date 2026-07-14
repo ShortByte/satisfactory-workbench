@@ -2,6 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { SaveService } from '../../core/save.service';
 import { I18nService } from '../../i18n/i18n.service';
+import { UpdateService } from '../../core/update.service';
 import { SftpPanel } from './sftp/sftp-panel';
 import type { SavePlatform } from '../../../shared/ipc-types';
 
@@ -15,9 +16,20 @@ import type { SavePlatform } from '../../../shared/ipc-types';
 export class Dashboard implements OnInit {
   protected readonly save = inject(SaveService);
   protected readonly i18n = inject(I18nService);
+  protected readonly update = inject(UpdateService);
 
   ngOnInit(): void {
     this.refresh();
+  }
+
+  protected checkUpdate(): void {
+    this.update.check();
+  }
+  protected downloadUpdate(): void {
+    this.update.download();
+  }
+  protected installUpdate(): void {
+    this.update.install();
   }
 
   /** Re-scan bundled + auto-discovered save folders. */

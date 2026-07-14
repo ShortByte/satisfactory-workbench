@@ -10,6 +10,7 @@ import {
   type SaveSummary,
   type SftpConnection,
   type SftpConnectionInput,
+  type UpdateStatus,
 } from '../src/shared/ipc-types';
 
 /**
@@ -43,6 +44,16 @@ const bridge: SatisfactoryBridge = {
     modifiedAtMs: number,
   ): Promise<IpcResult<SaveSummary>> =>
     ipcRenderer.invoke(IpcChannels.SftpOpen, id, remotePath, modifiedAtMs),
+
+  appVersion: (): Promise<string> => ipcRenderer.invoke(IpcChannels.AppVersion),
+  updateCheck: (): Promise<IpcResult<null>> => ipcRenderer.invoke(IpcChannels.UpdateCheck),
+  updateDownload: (): Promise<IpcResult<null>> => ipcRenderer.invoke(IpcChannels.UpdateDownload),
+  updateInstall: () => ipcRenderer.send(IpcChannels.UpdateInstall),
+  onUpdateStatus: (cb: (status: UpdateStatus) => void): (() => void) => {
+    const listener = (_e: unknown, status: UpdateStatus) => cb(status);
+    ipcRenderer.on(IpcChannels.UpdateStatus, listener);
+    return () => ipcRenderer.removeListener(IpcChannels.UpdateStatus, listener);
+  },
 
   getMapFeatures: (): Promise<IpcResult<MapFeatureSet>> =>
     ipcRenderer.invoke(IpcChannels.GetMapFeatures),

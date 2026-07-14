@@ -19,6 +19,7 @@ import { extractMapFeatures } from './map-service';
 import { discoverSaveLocations } from './save-locations';
 import { addConnection, listConnections, removeConnection } from './sftp-config';
 import { downloadRemoteSave, listRemoteSaves, testConnection } from './sftp-service';
+import { checkForUpdates, downloadUpdate, initAutoUpdater, quitAndInstall } from './updater';
 
 /** Dev server URL served by `ng serve` (see the `dev` npm script). */
 const DEV_SERVER_URL = process.env.ELECTRON_RENDERER_URL ?? 'http://localhost:4200';
@@ -237,6 +238,32 @@ function registerIpcHandlers(): void {
       }),
   );
 
+  // ── Auto-update (GitHub releases) ────────────────────────────────────
+  ipcMain.handle(IpcChannels.AppVersion, () => app.getVersion());
+
+  ipcMain.handle(
+    IpcChannels.UpdateCheck,
+    (): Promise<IpcResult<null>> =>
+      toResult(async () => {
+        if (app.isPackaged) {
+          await checkForUpdates();
+        } else {
+          // No updates in dev; report a clean "up to date" so the UI stays quiet.
+          mainWindow?.webContents.send(IpcChannels.UpdateStatus, { state: 'not-available' });
+        }
+        return null;
+      }),
+  );
+  ipcMain.handle(
+    IpcChannels.UpdateDownload,
+    (): Promise<IpcResult<null>> =>
+      toResult(async () => {
+        await downloadUpdate();
+        return null;
+      }),
+  );
+  ipcMain.on(IpcChannels.UpdateInstall, () => quitAndInstall());
+
   // Custom title-bar window controls.
   ipcMain.on(IpcChannels.WindowMinimize, () => mainWindow?.minimize());
   ipcMain.on(IpcChannels.WindowMaximizeToggle, () => {
@@ -252,6 +279,12 @@ app.whenReady().then(() => {
   Menu.setApplicationMenu(null); // no default Electron menu bar
   registerIpcHandlers();
   createWindow();
+  initAutoUpdater(() => mainWindow);
+
+  // Check for updates shortly after startup (packaged builds only).
+  if (app.isPackaged) {
+    setTimeout(() => void checkForUpdates().catch(() => {}), 4000);
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

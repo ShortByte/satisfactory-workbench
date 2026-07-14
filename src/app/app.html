@@ -34,6 +34,38 @@
       </button>
     }
 
+    @switch (update.state()) {
+      @case ('available') {
+        <button
+          class="update"
+          (click)="downloadUpdate()"
+          [title]="i18n.t('update.availableTitle', { version: update.version() })"
+        >
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M8 2v8" /><path d="M4.5 7 8 10.5 11.5 7" /><path d="M3 13.5h10" />
+          </svg>
+          <span class="update__label">{{ i18n.t('update.available') }}</span>
+        </button>
+      }
+      @case ('downloading') {
+        <span class="update update--progress" [title]="i18n.t('update.downloadingTitle')">
+          <span class="update__label">{{ i18n.t('update.downloading', { n: update.progress() }) }}</span>
+        </span>
+      }
+      @case ('downloaded') {
+        <button
+          class="update update--ready"
+          (click)="installUpdate()"
+          [title]="i18n.t('update.readyTitle', { version: update.version() })"
+        >
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" /><path d="M13.5 2v3h-3" />
+          </svg>
+          <span class="update__label">{{ i18n.t('update.restart') }}</span>
+        </button>
+      }
+    }
+
     <div class="lang" role="group" [attr.aria-label]="i18n.t('lang.label')">
       @for (l of i18n.available; track l.code) {
         <button

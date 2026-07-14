@@ -39,6 +39,43 @@ export const TRANSLATIONS: Record<string, Entry> = {
     de: 'Neueren Spielstand laden: {name}',
   },
 
+  // ── Auto-update ───────────────────────────────────────────────────────
+  'update.title': { en: 'Updates', de: 'Updates' },
+  'update.installed': { en: 'Installed version', de: 'Installierte Version' },
+  'update.check': { en: 'Check for updates', de: 'Nach Updates suchen' },
+  'update.download': { en: 'Download', de: 'Herunterladen' },
+  'update.restartInstall': { en: 'Restart & install', de: 'Neustarten & installieren' },
+  'update.statusChecking': { en: 'Checking for updates…', de: 'Suche nach Updates…' },
+  'update.statusUpToDate': {
+    en: "You're on the latest version.",
+    de: 'Du hast die neueste Version.',
+  },
+  'update.statusAvailable': {
+    en: 'Version {version} is available.',
+    de: 'Version {version} ist verfügbar.',
+  },
+  'update.statusDownloading': {
+    en: 'Downloading… {n}%',
+    de: 'Wird heruntergeladen… {n}%',
+  },
+  'update.statusReady': {
+    en: 'Version {version} downloaded — restart to install.',
+    de: 'Version {version} heruntergeladen — Neustart zum Installieren.',
+  },
+  'update.statusError': { en: 'Update check failed.', de: 'Update-Prüfung fehlgeschlagen.' },
+  'update.available': { en: 'Update', de: 'Update' },
+  'update.availableTitle': {
+    en: 'Update {version} available — click to download',
+    de: 'Update {version} verfügbar — zum Herunterladen klicken',
+  },
+  'update.downloading': { en: 'Update {n}%', de: 'Update {n}%' },
+  'update.downloadingTitle': { en: 'Downloading update…', de: 'Update wird heruntergeladen…' },
+  'update.restart': { en: 'Restart', de: 'Neustarten' },
+  'update.readyTitle': {
+    en: 'Update {version} ready — restart to install',
+    de: 'Update {version} bereit — Neustart zum Installieren',
+  },
+
   // ── Window controls ───────────────────────────────────────────────────
   'ctl.minimize': { en: 'Minimize', de: 'Minimieren' },
   'ctl.maximize': { en: 'Maximize', de: 'Maximieren' },

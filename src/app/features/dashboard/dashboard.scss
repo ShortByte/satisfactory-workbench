@@ -125,6 +125,41 @@
   margin-top: 1.25rem;
 }
 
+/* ── Updates / about ───────────────────────────────────────────────────── */
+.updates {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+
+  &__head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+
+    h3 { margin: 0; font-size: 0.95rem; }
+  }
+  &__version {
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+  }
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  &__status {
+    font-size: 0.85rem;
+    color: var(--muted);
+
+    &.ok { color: var(--ok); }
+    &.accent { color: var(--accent-bright); }
+    &.bad { color: var(--danger); }
+  }
+}
+
 .btn {
   border: 1px solid var(--border);
   background: var(--panel);

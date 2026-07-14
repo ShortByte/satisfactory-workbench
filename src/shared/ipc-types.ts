@@ -16,6 +16,11 @@ export const IpcChannels = {
   SftpPickKey: 'sftp:pick-key',
   SftpListSaves: 'sftp:list-saves',
   SftpOpen: 'sftp:open',
+  AppVersion: 'app:version',
+  UpdateCheck: 'update:check',
+  UpdateDownload: 'update:download',
+  UpdateInstall: 'update:install',
+  UpdateStatus: 'update:status',
   GetMapFeatures: 'map:get-features',
   WindowMinimize: 'window:minimize',
   WindowMaximizeToggle: 'window:maximize-toggle',
@@ -210,6 +215,26 @@ export interface RemoteSave {
   modifiedAtMs: number;
 }
 
+/** Auto-update lifecycle state (GitHub-releases updater). */
+export type UpdateState =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'not-available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error';
+
+/** Auto-update status pushed from the main process to the renderer. */
+export interface UpdateStatus {
+  state: UpdateState;
+  /** Version of the available/downloaded update. */
+  version?: string;
+  /** Download progress 0–100 while state is 'downloading'. */
+  progressPercent?: number;
+  error?: string;
+}
+
 /** Uniform result wrapper so the renderer can handle failures without try/catch on IPC. */
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -234,6 +259,19 @@ export interface SatisfactoryBridge {
   sftpListSaves(id: string): Promise<IpcResult<RemoteSave[]>>;
   /** Download (cached) + parse a remote save; becomes the loaded save. */
   sftpOpen(id: string, remotePath: string, modifiedAtMs: number): Promise<IpcResult<SaveSummary>>;
+
+  /** The running app version (from package.json / the installed build). */
+  appVersion(): Promise<string>;
+
+  // Auto-update (GitHub releases).
+  /** Check GitHub releases for a newer version. */
+  updateCheck(): Promise<IpcResult<null>>;
+  /** Start downloading the available update. */
+  updateDownload(): Promise<IpcResult<null>>;
+  /** Quit and install a downloaded update. */
+  updateInstall(): void;
+  /** Subscribe to update-status pushes; returns an unsubscribe function. */
+  onUpdateStatus(cb: (status: UpdateStatus) => void): () => void;
   /** Extract positioned world features from the currently loaded save. */
   getMapFeatures(): Promise<IpcResult<MapFeatureSet>>;
 
