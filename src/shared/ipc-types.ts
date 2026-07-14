@@ -8,7 +8,29 @@ export const IpcChannels = {
   OpenSaveDialog: 'save:open-dialog',
   ParseSavePath: 'save:parse-path',
   ListBundledSaves: 'save:list-bundled',
+  DiscoverSaves: 'save:discover',
+  SftpList: 'sftp:list',
+  SftpAdd: 'sftp:add',
+  SftpRemove: 'sftp:remove',
+  SftpTest: 'sftp:test',
+  SftpPickKey: 'sftp:pick-key',
+  SftpListSaves: 'sftp:list-saves',
+  SftpOpen: 'sftp:open',
   GetMapFeatures: 'map:get-features',
+  WindowMinimize: 'window:minimize',
+  WindowMaximizeToggle: 'window:maximize-toggle',
+  WindowClose: 'window:close',
+  WindowIsMaximized: 'window:is-maximized',
+  WindowMaximizedChanged: 'window:maximized-changed',
+} as const;
+
+/**
+ * Stable, locale-free error codes thrown by the main process. The renderer maps
+ * these to translated messages (the main process has no access to the UI
+ * language, which lives in the renderer's localStorage).
+ */
+export const IpcErrorCode = {
+  NoSaveLoaded: 'ERR_NO_SAVE_LOADED',
 } as const;
 
 /** High-level classification of a positioned world object, for map layers. */
@@ -123,14 +145,103 @@ export interface BundledSave {
   fileSizeBytes: number;
 }
 
+/** Which storefront/account a discovered save folder belongs to. */
+export type SavePlatform = 'steam' | 'epic' | 'common' | 'other';
+
+/** A save file discovered in a local Satisfactory save folder. */
+export interface DiscoveredSave {
+  filePath: string;
+  fileName: string;
+  fileSizeBytes: number;
+  /** Last-modified time, epoch milliseconds (for sorting/display). */
+  modifiedAtMs: number;
+}
+
+/** A local save-games folder (one account) with the saves it contains. */
+export interface SaveLocation {
+  platform: SavePlatform;
+  /** Account-id folder name (Steam ID64 / Epic account id); '' for the root. */
+  accountId: string;
+  /** Absolute path of the folder. */
+  dirPath: string;
+  /** Saves in this folder, most-recently-modified first. */
+  saves: DiscoveredSave[];
+}
+
+/** SFTP authentication method for a dedicated-server connection. */
+export type SftpAuthType = 'password' | 'key';
+
+/** Stored SFTP connection metadata (never carries the secret to the renderer). */
+export interface SftpConnection {
+  id: string;
+  name: string;
+  host: string;
+  port: number;
+  username: string;
+  /** Remote directory that holds the server's `.sav` files. */
+  remoteDir: string;
+  authType: SftpAuthType;
+}
+
+/** Secret material for a connection — encrypted at rest via the OS keychain. */
+export interface SftpSecret {
+  password?: string;
+  /** Absolute path to a private key file (read by the main process on connect). */
+  privateKeyPath?: string;
+  passphrase?: string;
+}
+
+/** Payload for creating a connection (metadata without id + its secret). */
+export interface SftpConnectionInput {
+  name: string;
+  host: string;
+  port?: number;
+  username: string;
+  remoteDir: string;
+  authType: SftpAuthType;
+  secret: SftpSecret;
+}
+
+/** A `.sav` file found on a remote server via SFTP. */
+export interface RemoteSave {
+  fileName: string;
+  remotePath: string;
+  fileSizeBytes: number;
+  modifiedAtMs: number;
+}
+
 /** Uniform result wrapper so the renderer can handle failures without try/catch on IPC. */
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
 /** Shape of the API exposed on `window.satisfactory` by the preload script. */
 export interface SatisfactoryBridge {
-  openSaveDialog(): Promise<IpcResult<SaveSummary | null>>;
+  /** @param title Localized title for the native open dialog (from the renderer). */
+  openSaveDialog(title?: string): Promise<IpcResult<SaveSummary | null>>;
   parseSavePath(filePath: string): Promise<IpcResult<SaveSummary>>;
   listBundledSaves(): Promise<IpcResult<BundledSave[]>>;
+  /** Auto-discover local Satisfactory save folders (Steam/Epic accounts). */
+  discoverSaves(): Promise<IpcResult<SaveLocation[]>>;
+
+  // SFTP dedicated-server connections.
+  sftpList(): Promise<IpcResult<SftpConnection[]>>;
+  sftpAdd(input: SftpConnectionInput): Promise<IpcResult<SftpConnection>>;
+  sftpRemove(id: string): Promise<IpcResult<null>>;
+  /** Try to connect + list the remote dir without saving; throws on failure. */
+  sftpTest(input: SftpConnectionInput): Promise<IpcResult<RemoteSave[]>>;
+  /** Open a native dialog to pick a private-key file; returns its path or null. */
+  sftpPickKey(): Promise<IpcResult<string | null>>;
+  /** List `.sav` files on a saved connection's remote dir. */
+  sftpListSaves(id: string): Promise<IpcResult<RemoteSave[]>>;
+  /** Download (cached) + parse a remote save; becomes the loaded save. */
+  sftpOpen(id: string, remotePath: string, modifiedAtMs: number): Promise<IpcResult<SaveSummary>>;
   /** Extract positioned world features from the currently loaded save. */
   getMapFeatures(): Promise<IpcResult<MapFeatureSet>>;
+
+  // Custom title-bar window controls (the window is frameless).
+  windowMinimize(): void;
+  windowMaximizeToggle(): void;
+  windowClose(): void;
+  windowIsMaximized(): Promise<boolean>;
+  /** Subscribe to maximize/unmaximize; returns an unsubscribe function. */
+  onWindowMaximizedChanged(cb: (maximized: boolean) => void): () => void;
 }

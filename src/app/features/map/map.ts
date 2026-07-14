@@ -17,6 +17,7 @@ import 'leaflet.markercluster'; // extends L with markerClusterGroup
 import type { FeatureCategory, MapFeature, MapFeatureSet } from '../../../shared/ipc-types';
 import { CATEGORY_STYLES, CategoryStyle, MapService, resourceInfo } from '../../core/map.service';
 import { SaveService } from '../../core/save.service';
+import { I18nService } from '../../i18n/i18n.service';
 import { gameToLatLng, latLngToGame, mapBounds, SF_MAP } from './satisfactory-coords';
 import {
   extractorMarker,
@@ -38,9 +39,6 @@ export interface NearestSource {
   latlng: L.LatLngExpression;
 }
 
-/** German labels for node purity. */
-const PURITY_LABELS: Record<string, string> = { pure: 'Rein', normal: 'Normal', impure: 'Unrein' };
-
 /** Local cached th.gl tile pyramid (copied from public/ into the build output). */
 const TILE_URL = 'map/world/{z}/{y}/{x}.webp';
 /** 1×1 transparent PNG shown in place of missing tiles (e.g. before download). */
@@ -56,6 +54,7 @@ const TRANSPARENT_TILE =
 export class MapView implements OnInit, AfterViewInit, OnDestroy {
   private readonly mapService = inject(MapService);
   protected readonly save = inject(SaveService);
+  protected readonly i18n = inject(I18nService);
 
   protected readonly data = this.mapService.data;
   protected readonly loading = this.mapService.loading;
@@ -107,12 +106,12 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
     return [...m.entries()]
       .map(([resource, pm]) => ({
         resource,
-        label: resourceInfo(resource).label,
+        label: this.i18n.t(resourceInfo(resource).labelKey),
         icon: resourceIconUrl(resource),
         total: [...pm.values()].reduce((a, b) => a + b, 0),
         purities: MapView.PURITY_ORDER.filter((p) => pm.has(p)).map((p) => ({
           purity: p,
-          label: PURITY_LABELS[p],
+          label: this.i18n.t(`pur.${p}`),
           count: pm.get(p) ?? 0,
         })),
       }))
@@ -144,7 +143,7 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
     return [...best.values()]
       .map(({ f, distSq }) => ({
         resource: f.resource!,
-        label: resourceInfo(f.resource!).label,
+        label: this.i18n.t(resourceInfo(f.resource!).labelKey),
         icon: resourceIconUrl(f.resource!),
         purity: f.purity ?? 'normal',
         distance: Math.sqrt(distSq) / 100, // cm -> m
@@ -155,6 +154,7 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
 
   @ViewChild('mapEl') private mapEl!: ElementRef<HTMLDivElement>;
   private referenceMarker?: L.Marker;
+  private zoomControl?: L.Control.Zoom;
 
   private map?: L.Map;
   private tileLayer?: L.TileLayer;
@@ -185,6 +185,20 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
       const sources = this.nearestSources();
       if (this.map) this.drawSourceLines(sources);
     });
+    // Re-add the zoom control with translated tooltips when the language changes.
+    effect(() => {
+      this.i18n.lang();
+      if (this.map) this.addZoomControl();
+    });
+  }
+
+  /** (Re)create the zoom control so its +/- tooltips use the active language. */
+  private addZoomControl(): void {
+    if (!this.map) return;
+    this.zoomControl?.remove();
+    this.zoomControl = L.control
+      .zoom({ zoomInTitle: this.i18n.t('map.zoomIn'), zoomOutTitle: this.i18n.t('map.zoomOut') })
+      .addTo(this.map);
   }
 
   private static readonly STORAGE_KEY = 'sf-map-filters';
@@ -228,7 +242,8 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
       zoomDelta: 0.5,
       preferCanvas: true,
       attributionControl: false,
-      zoomControl: true,
+      // Added manually (see addZoomControl) so the +/- tooltips can be translated.
+      zoomControl: false,
       // Keep Leaflet's default zoom/fade animations (smooth tiles + markers).
       // Clustering + viewport culling keep the marker count low enough that the
       // default animation no longer lags. The only animation we disable is the
@@ -250,6 +265,7 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
       keepBuffer: 4,
     });
     this.tileLayer.addTo(this.map);
+    this.addZoomControl();
 
     this.sourceLines.addTo(this.map);
 
@@ -495,19 +511,22 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
   private popupHtml(f: MapFeature): string {
     const rows: string[] = [
       `<strong>${escapeHtml(f.type)}</strong>`,
-      `<span class="pop-cat">${CATEGORY_STYLES[f.category].label}</span>`,
+      `<span class="pop-cat">${escapeHtml(this.i18n.t(`cat.${f.category}`))}</span>`,
       `<code>${escapeHtml(f.id)}</code>`,
       `X ${f.x} · Y ${f.y} · Z ${f.z}`,
     ];
     if (f.resource) {
       const r = resourceInfo(f.resource);
-      const pur = f.purity ? ` · ${PURITY_LABELS[f.purity]}` : '';
-      rows.splice(1, 0, `<span class="pop-res" style="color:${r.color}">● ${escapeHtml(r.label)}${pur}</span>`);
+      const label = this.i18n.t(r.labelKey);
+      const pur = f.purity ? ` · ${this.i18n.t(`pur.${f.purity}`)}` : '';
+      rows.splice(1, 0, `<span class="pop-res" style="color:${r.color}">● ${escapeHtml(label)}${escapeHtml(pur)}</span>`);
     }
     if (f.category === 'extractor' && f.clock !== undefined && f.clock !== 1) {
-      rows.push(`Takt: ${Math.round(f.clock * 100)}%`);
+      rows.push(`${escapeHtml(this.i18n.t('map.popClock'))}: ${Math.round(f.clock * 100)}%`);
     }
-    if (f.extracts) rows.push(`fördert: <code>${escapeHtml(f.extracts.split('.').pop() ?? '')}</code>`);
+    if (f.extracts) {
+      rows.push(`${escapeHtml(this.i18n.t('map.popExtracts'))}: <code>${escapeHtml(f.extracts.split('.').pop() ?? '')}</code>`);
+    }
     return `<div class="pop">${rows.join('<br>')}</div>`;
   }
 }

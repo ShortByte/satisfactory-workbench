@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CalculatorService } from './calculator.service';
 import { MapService } from '../../core/map.service';
 import { SaveService } from '../../core/save.service';
+import { I18nService } from '../../i18n/i18n.service';
 import type { GRecipe, ProdResult, ProdTreeNode, RecipeChoices } from './game-data.model';
 import {
   descToNodeKey,
@@ -23,6 +24,7 @@ export class Calculator {
   private readonly calc = inject(CalculatorService);
   private readonly mapService = inject(MapService);
   protected readonly save = inject(SaveService);
+  protected readonly i18n = inject(I18nService);
 
   /** All producible items for the picker. */
   protected readonly items = this.calc.producibleItems();

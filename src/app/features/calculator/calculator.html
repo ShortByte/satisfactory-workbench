@@ -1,12 +1,12 @@
 <div class="calc">
   <header class="calc__head">
-    <h2>Produktions-Calculator</h2>
-    <p class="hint">Standard-Rezepte · Alt-Rezepte & Map-Verknüpfung folgen</p>
+    <h2>{{ i18n.t('calc.title') }}</h2>
+    <p class="hint">{{ i18n.t('calc.subtitle') }}</p>
   </header>
 
   <section class="controls">
     <label class="field">
-      <span>Produkt</span>
+      <span>{{ i18n.t('calc.product') }}</span>
       <select [ngModel]="target()" (ngModelChange)="target.set($event)">
         @for (it of items; track it.className) {
           <option [value]="it.className">{{ it.name }}</option>
@@ -15,27 +15,27 @@
     </label>
 
     <label class="field field--rate">
-      <span>Rate (pro Minute)</span>
+      <span>{{ i18n.t('calc.ratePerMin') }}</span>
       <input type="number" min="0" step="1" [ngModel]="rate()" (ngModelChange)="rate.set(+$event)" />
     </label>
 
     @if (hasChoices()) {
-      <button class="reset-btn" (click)="resetRecipes()">Rezepte zurücksetzen</button>
+      <button class="reset-btn" (click)="resetRecipes()">{{ i18n.t('calc.resetRecipes') }}</button>
     }
   </section>
 
   @if (result(); as res) {
     <section class="summary">
       <div class="card">
-        <span class="card__label">Gebäude gesamt</span>
+        <span class="card__label">{{ i18n.t('calc.totalBuildings') }}</span>
         <span class="card__value">{{ res.totalBuildings | number: '1.0-1' }}</span>
       </div>
       <div class="card">
-        <span class="card__label">Strom</span>
+        <span class="card__label">{{ i18n.t('calc.power') }}</span>
         <span class="card__value">{{ res.totalPower | number: '1.0-1' }} MW</span>
       </div>
       <div class="card">
-        <span class="card__label">Rohstoff-Arten</span>
+        <span class="card__label">{{ i18n.t('calc.rawTypes') }}</span>
         <span class="card__value">{{ res.raw.length }}</span>
       </div>
     </section>
@@ -51,10 +51,10 @@
     <div class="panels">
       <div class="panel">
         <div class="panel__head">
-          <h3>Produktion</h3>
+          <h3>{{ i18n.t('calc.production') }}</h3>
           <div class="viewtoggle">
-            <button [class.active]="view() === 'table'" (click)="view.set('table')">Übersicht</button>
-            <button [class.active]="view() === 'tree'" (click)="view.set('tree')">Baum</button>
+            <button [class.active]="view() === 'table'" (click)="view.set('table')">{{ i18n.t('calc.viewTable') }}</button>
+            <button [class.active]="view() === 'tree'" (click)="view.set('tree')">{{ i18n.t('calc.viewTree') }}</button>
           </div>
         </div>
 
@@ -62,12 +62,12 @@
         <table>
           <thead>
             <tr>
-              <th>Produkt</th>
-              <th>Rezept</th>
-              <th>Gebäude</th>
-              <th class="num">Anzahl</th>
-              <th class="num">Rate/min</th>
-              <th class="num">MW</th>
+              <th>{{ i18n.t('calc.colProduct') }}</th>
+              <th>{{ i18n.t('calc.colRecipe') }}</th>
+              <th>{{ i18n.t('calc.colBuilding') }}</th>
+              <th class="num">{{ i18n.t('calc.colCount') }}</th>
+              <th class="num">{{ i18n.t('calc.colRatePerMin') }}</th>
+              <th class="num">{{ i18n.t('calc.colMW') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -87,7 +87,7 @@
                       (ngModelChange)="chooseRecipe(s.item, $event)"
                     >
                       @for (r of recipesFor(s.item); track r.className) {
-                        <option [value]="r.className">{{ r.name }}{{ r.alternate ? ' (Alt)' : '' }}</option>
+                        <option [value]="r.className">{{ r.name }}{{ r.alternate ? ' ' + i18n.t('calc.altSuffix') : '' }}</option>
                       }
                     </select>
                   } @else {
@@ -110,10 +110,10 @@
       </div>
 
       <div class="panel">
-        <h3>Rohstoffe</h3>
+        <h3>{{ i18n.t('calc.rawMaterials') }}</h3>
         <table>
           <thead>
-            <tr><th>Ressource</th><th class="num">Rate/min</th></tr>
+            <tr><th>{{ i18n.t('calc.colResource') }}</th><th class="num">{{ i18n.t('calc.colRatePerMin') }}</th></tr>
           </thead>
           <tbody>
             @for (r of res.raw; track r.item) {
@@ -132,25 +132,22 @@
     </div>
 
     <section class="world">
-      <h3>In deiner Welt</h3>
+      <h3>{{ i18n.t('calc.world') }}</h3>
       @if (!save.hasSave()) {
-        <p class="hint">Lade ein Save (Dashboard), um freie Ressourcen-Nodes abzugleichen.</p>
+        <p class="hint">{{ i18n.t('calc.worldNeedSave') }}</p>
       } @else if (worldAvailability(); as avail) {
-        <p class="hint">
-          „Schon abgebaut" = tatsächliche Förderung deiner Extraktoren (inkl. Overclock) · „Frei max"
-          = Potenzial freier Nodes mit MinerMk3 / Öl-Extraktor @100%.
-        </p>
+        <p class="hint">{{ i18n.t('calc.worldHint') }}</p>
         <div class="panel">
           <table>
             <thead>
               <tr>
-                <th>Ressource</th>
-                <th class="num">Benötigt/min</th>
-                <th class="num">Schon abgebaut/min</th>
-                <th class="num">Freie Nodes</th>
-                <th>Reinheit (U/N/R)</th>
-                <th class="num">Frei max/min</th>
-                <th>Status</th>
+                <th>{{ i18n.t('calc.colResource') }}</th>
+                <th class="num">{{ i18n.t('calc.colNeeded') }}</th>
+                <th class="num">{{ i18n.t('calc.colMined') }}</th>
+                <th class="num">{{ i18n.t('calc.colFreeNodes') }}</th>
+                <th>{{ i18n.t('calc.colPurity') }}</th>
+                <th class="num">{{ i18n.t('calc.colFreeMax') }}</th>
+                <th>{{ i18n.t('calc.colStatus') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -174,7 +171,7 @@
                     @if (a.hasNodes) {
                       {{ a.freeNodes }}
                     } @else if (a.wells > 0) {
-                      <span class="muted">{{ a.wells }} Wells</span>
+                      <span class="muted">{{ a.wells }} {{ i18n.t('calc.wells') }}</span>
                     } @else {
                       <span class="muted">—</span>
                     }
@@ -190,14 +187,14 @@
                   <td>
                     @if (a.hasNodes) {
                       @if (a.enough) {
-                        <span class="ok">✓ reicht</span>
+                        <span class="ok">{{ i18n.t('calc.statusEnough') }}</span>
                       } @else {
-                        <span class="bad">⚠ zu wenig</span>
+                        <span class="bad">{{ i18n.t('calc.statusTooLittle') }}</span>
                       }
                     } @else if (a.wells > 0) {
-                      <span class="ok">✓ aus Wells</span>
+                      <span class="ok">{{ i18n.t('calc.statusFromWells') }}</span>
                     } @else {
-                      <span class="muted">keine Node-Daten</span>
+                      <span class="muted">{{ i18n.t('calc.statusNoNodeData') }}</span>
                     }
                   </td>
                 </tr>
@@ -206,11 +203,11 @@
           </table>
         </div>
       } @else {
-        <p class="hint">Node-Daten werden geladen…</p>
+        <p class="hint">{{ i18n.t('calc.loadingNodeData') }}</p>
       }
     </section>
   } @else {
-    <p class="hint">Produkt und Rate wählen.</p>
+    <p class="hint">{{ i18n.t('calc.pickProduct') }}</p>
   }
 
   <ng-template #treeNode let-node>
@@ -223,7 +220,7 @@
           <span class="tree__mach">{{ node.buildings | number: '1.0-2' }}× {{ node.buildingName }}</span>
           <span class="tree__recipe" [class.alt]="node.recipe.alternate">{{ node.recipe.name }}</span>
         } @else {
-          <span class="tree__rawtag">Rohstoff</span>
+          <span class="tree__rawtag">{{ i18n.t('calc.rawTag') }}</span>
         }
       </div>
       @if (node.children.length) {

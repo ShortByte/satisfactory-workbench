@@ -1,32 +1,76 @@
 <section class="loader">
-  <div class="loader__actions">
+  <div class="loader__bar">
     <button class="btn btn--primary" (click)="save.openViaDialog()" [disabled]="save.loading()">
-      Save-Datei öffnen…
+      {{ i18n.t('dash.openFile') }}
     </button>
-
-    @if (save.bundledSaves().length > 0) {
-      <span class="loader__hint">oder ein Beispiel aus <code>saves/</code>:</span>
-      @for (b of save.bundledSaves(); track b.filePath) {
-        <button class="btn" (click)="save.openPath(b.filePath)" [disabled]="save.loading()">
-          {{ b.fileName }} ({{ formatBytes(b.fileSizeBytes) }})
-        </button>
-      }
+    @if (save.isElectron) {
+      <button class="btn" (click)="refresh()" [disabled]="save.loading()">
+        ↻ {{ i18n.t('dash.refresh') }}
+      </button>
     }
   </div>
 
   @if (!save.isElectron) {
     <p class="banner banner--warn">
-      Läuft ohne Electron-Bridge (reiner Browser). Starte die App mit
-      <code>npm run dev</code>, um Save-Dateien zu laden.
+      {{ i18n.t('dash.noBridgePre') }}
+      <code>npm run dev</code> {{ i18n.t('dash.noBridgePost') }}
     </p>
   }
 
   @if (save.loading()) {
-    <p class="banner">Save wird geparst…</p>
+    <p class="banner">{{ i18n.t('dash.parsing') }}</p>
   }
 
   @if (save.error(); as err) {
-    <p class="banner banner--error">Fehler: {{ err }}</p>
+    <p class="banner banner--error">{{ i18n.t('common.error') }}: {{ err }}</p>
+  }
+
+  @if (save.saveLocations().length) {
+    <h3 class="loader__title">{{ i18n.t('dash.localSaves') }}</h3>
+    <div class="locations">
+      @for (loc of save.saveLocations(); track loc.dirPath) {
+        <div class="loc">
+          <header class="loc__head">
+            <span class="loc__badge loc__badge--{{ loc.platform }}">{{ platformLabel(loc.platform) }}</span>
+            @if (loc.accountId) {
+              <code class="loc__acct" [title]="loc.dirPath">{{ shortId(loc.accountId) }}</code>
+            }
+            <span class="loc__count">{{ i18n.t('dash.savesCount', { n: loc.saves.length }) }}</span>
+          </header>
+          <ul class="saves">
+            @for (sv of loc.saves; track sv.filePath) {
+              <li
+                class="save"
+                (click)="save.openPath(sv.filePath)"
+                [class.save--busy]="save.loading()"
+                [title]="sv.filePath"
+              >
+                <span class="save__name">{{ saveName(sv.fileName) }}</span>
+                <span class="save__date">{{ formatDate(sv.modifiedAtMs) }}</span>
+                <span class="save__size">{{ formatBytes(sv.fileSizeBytes) }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+  } @else if (save.isElectron && !save.loading()) {
+    <p class="loader__hint">{{ i18n.t('dash.noLocalSaves') }}</p>
+  }
+
+  @if (save.bundledSaves().length > 0) {
+    <div class="bundled">
+      <span class="loader__hint">{{ i18n.t('dash.orExample') }} <code>saves/</code>:</span>
+      @for (b of save.bundledSaves(); track b.filePath) {
+        <button class="btn btn--sm" (click)="save.openPath(b.filePath)" [disabled]="save.loading()">
+          {{ b.fileName }} ({{ formatBytes(b.fileSizeBytes) }})
+        </button>
+      }
+    </div>
+  }
+
+  @if (save.isElectron) {
+    <app-sftp-panel />
   }
 </section>
 
@@ -36,50 +80,50 @@
       <h2>{{ s.sessionName || s.saveName || s.fileName }}</h2>
       <span class="pill">{{ s.fileName }}</span>
       <span class="pill">{{ formatBytes(s.fileSizeBytes) }}</span>
-      @if (s.creativeModeEnabled) { <span class="pill pill--accent">Creative</span> }
-      @if (s.isModded) { <span class="pill pill--warn">Modded</span> }
+      @if (s.creativeModeEnabled) { <span class="pill pill--accent">{{ i18n.t('dash.creative') }}</span> }
+      @if (s.isModded) { <span class="pill pill--warn">{{ i18n.t('dash.modded') }}</span> }
     </header>
 
     <div class="cards">
       <div class="card">
-        <span class="card__label">Objekte gesamt</span>
+        <span class="card__label">{{ i18n.t('dash.totalObjects') }}</span>
         <span class="card__value">{{ s.totalObjectCount | number }}</span>
       </div>
       <div class="card">
-        <span class="card__label">Entities</span>
+        <span class="card__label">{{ i18n.t('dash.entities') }}</span>
         <span class="card__value">{{ s.totalEntityCount | number }}</span>
       </div>
       <div class="card">
-        <span class="card__label">Components</span>
+        <span class="card__label">{{ i18n.t('dash.components') }}</span>
         <span class="card__value">{{ s.totalComponentCount | number }}</span>
       </div>
       <div class="card">
-        <span class="card__label">Level</span>
+        <span class="card__label">{{ i18n.t('dash.levels') }}</span>
         <span class="card__value">{{ s.levelCount | number }}</span>
       </div>
       <div class="card">
-        <span class="card__label">Spielzeit</span>
+        <span class="card__label">{{ i18n.t('dash.playtime') }}</span>
         <span class="card__value">{{ formatDuration(s.playDurationSeconds) }}</span>
       </div>
       <div class="card">
-        <span class="card__label">Parse-Dauer</span>
+        <span class="card__label">{{ i18n.t('dash.parseTime') }}</span>
         <span class="card__value">{{ s.parseDurationMs | number }} ms</span>
       </div>
     </div>
 
     <div class="meta">
-      <div><span>Build-Version</span><b>{{ s.buildVersion }}</b></div>
-      <div><span>Save-Version</span><b>{{ s.saveVersion }}</b></div>
-      <div><span>Map</span><b>{{ s.mapName }}</b></div>
-      <div><span>Gespeichert</span><b>{{ s.saveDateTime }}</b></div>
+      <div><span>{{ i18n.t('dash.buildVersion') }}</span><b>{{ s.buildVersion }}</b></div>
+      <div><span>{{ i18n.t('dash.saveVersion') }}</span><b>{{ s.saveVersion }}</b></div>
+      <div><span>{{ i18n.t('dash.map') }}</span><b>{{ s.mapName }}</b></div>
+      <div><span>{{ i18n.t('dash.saved') }}</span><b>{{ s.saveDateTime }}</b></div>
     </div>
 
     <div class="tables">
       <div class="panel">
-        <h3>Häufigste Objekttypen</h3>
+        <h3>{{ i18n.t('dash.topTypes') }}</h3>
         <table>
           <thead>
-            <tr><th>Typ</th><th class="num">Anzahl</th></tr>
+            <tr><th>{{ i18n.t('dash.colType') }}</th><th class="num">{{ i18n.t('dash.colCount') }}</th></tr>
           </thead>
           <tbody>
             @for (t of s.topTypes; track t.typePath) {
@@ -93,15 +137,15 @@
       </div>
 
       <div class="panel">
-        <h3>Level ({{ s.levels.length }})</h3>
+        <h3>{{ i18n.t('dash.levels') }} ({{ s.levels.length }})</h3>
         <table>
           <thead>
-            <tr><th>Level</th><th class="num">Objekte</th><th class="num">Collectables</th></tr>
+            <tr><th>{{ i18n.t('dash.levels') }}</th><th class="num">{{ i18n.t('dash.colObjects') }}</th><th class="num">{{ i18n.t('dash.colCollectables') }}</th></tr>
           </thead>
           <tbody>
             @for (lvl of s.levels.slice(0, 30); track lvl.name) {
               <tr>
-                <td [title]="lvl.name">{{ lvl.name || '(persistent)' }}</td>
+                <td [title]="lvl.name">{{ lvl.name || i18n.t('dash.persistent') }}</td>
                 <td class="num">{{ lvl.objectCount | number }}</td>
                 <td class="num">{{ lvl.collectableCount | number }}</td>
               </tr>
@@ -109,13 +153,9 @@
           </tbody>
         </table>
         @if (s.levels.length > 30) {
-          <p class="panel__more">… {{ s.levels.length - 30 }} weitere</p>
+          <p class="panel__more">{{ i18n.t('dash.more', { n: s.levels.length - 30 }) }}</p>
         }
       </div>
     </div>
-  </section>
-} @else if (!save.loading()) {
-  <section class="empty">
-    <p>Noch keine Save-Datei geladen.</p>
   </section>
 }

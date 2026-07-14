@@ -1,0 +1,155 @@
+<section class="sftp">
+  <div class="sftp__head">
+    <h3>{{ i18n.t('sftp.title') }}</h3>
+    @if (!showForm()) {
+      <button class="btn btn--sm" (click)="openForm()">+ {{ i18n.t('sftp.add') }}</button>
+    }
+  </div>
+
+  @if (showForm()) {
+    <form class="sform" (ngSubmit)="submit()">
+      <div class="sform__grid">
+        <label class="fld">
+          <span>{{ i18n.t('sftp.name') }}</span>
+          <input type="text" name="name" [ngModel]="model().name" (ngModelChange)="patch({ name: $event })" />
+        </label>
+        <label class="fld fld--host">
+          <span>{{ i18n.t('sftp.host') }}</span>
+          <input type="text" name="host" placeholder="sftp://user@server.example.com:22/pfad"
+            [ngModel]="model().host" (ngModelChange)="patch({ host: $event })"
+            (paste)="onHostPaste($event)" />
+        </label>
+        <label class="fld fld--port">
+          <span>{{ i18n.t('sftp.port') }}</span>
+          <input type="number" name="port" min="1" [ngModel]="model().port" (ngModelChange)="patch({ port: +$event })" />
+        </label>
+        <label class="fld">
+          <span>{{ i18n.t('sftp.user') }}</span>
+          <input type="text" name="user" [ngModel]="model().username" (ngModelChange)="patch({ username: $event })" />
+        </label>
+        <label class="fld fld--dir">
+          <span>{{ i18n.t('sftp.remoteDir') }}</span>
+          <input type="text" name="dir" placeholder="/config/saved/server"
+            [ngModel]="model().remoteDir" (ngModelChange)="patch({ remoteDir: $event })" />
+        </label>
+      </div>
+
+      <div class="sform__auth">
+        <span class="sform__auth-label">{{ i18n.t('sftp.auth') }}</span>
+        <div class="segmented">
+          <button type="button" [class.active]="model().authType === 'password'" (click)="setAuth('password')">
+            {{ i18n.t('sftp.authPassword') }}
+          </button>
+          <button type="button" [class.active]="model().authType === 'key'" (click)="setAuth('key')">
+            {{ i18n.t('sftp.authKey') }}
+          </button>
+        </div>
+      </div>
+
+      @if (model().authType === 'password') {
+        <label class="fld">
+          <span>{{ i18n.t('sftp.password') }}</span>
+          <input type="password" name="pw" autocomplete="off"
+            [ngModel]="model().password" (ngModelChange)="patch({ password: $event })" />
+        </label>
+      } @else {
+        <div class="sform__grid">
+          <label class="fld fld--dir">
+            <span>{{ i18n.t('sftp.keyFile') }}</span>
+            <div class="filepick">
+              <input type="text" name="key" readonly placeholder="~/.ssh/id_ed25519"
+                [ngModel]="model().privateKeyPath" (ngModelChange)="patch({ privateKeyPath: $event })" />
+              <button type="button" class="btn btn--sm" (click)="pickKey()">{{ i18n.t('sftp.pickKey') }}</button>
+            </div>
+          </label>
+          <label class="fld">
+            <span>{{ i18n.t('sftp.passphrase') }}</span>
+            <input type="password" name="pass" autocomplete="off"
+              [ngModel]="model().passphrase" (ngModelChange)="patch({ passphrase: $event })" />
+          </label>
+        </div>
+      }
+
+      @if (formMsg(); as msg) {
+        <p class="sform__msg" [class.ok]="msg.ok" [class.bad]="!msg.ok">{{ msg.text }}</p>
+      }
+
+      <div class="sform__actions">
+        <button type="button" class="btn" (click)="test()" [disabled]="testing()">
+          {{ testing() ? i18n.t('sftp.testing') : i18n.t('sftp.test') }}
+        </button>
+        <span class="spacer"></span>
+        <button type="button" class="btn" (click)="closeForm()">{{ i18n.t('sftp.cancel') }}</button>
+        <button type="submit" class="btn btn--primary" [disabled]="saving()">{{ i18n.t('sftp.save') }}</button>
+      </div>
+    </form>
+  }
+
+  @if (sftp.connections().length) {
+    <ul class="conns">
+      @for (c of sftp.connections(); track c.id) {
+        <li class="conn" [class.conn--active]="isConnected(c.id)">
+          <div class="conn__row">
+            <button class="conn__toggle" (click)="toggle(c.id, c.name)">
+              <span class="conn__caret">{{ isConnected(c.id) ? '▾' : '▸' }}</span>
+              <span class="conn__name">{{ c.name }}</span>
+              <span class="conn__host">{{ c.username }}&#64;{{ c.host }}:{{ c.port }}</span>
+            </button>
+            <button class="conn__remove" (click)="remove(c.id)" [title]="i18n.t('sftp.remove')">✕</button>
+          </div>
+
+          @if (isConnected(c.id)) {
+            <div class="conn__body">
+              <div class="watchbar">
+                <label class="auto" [title]="i18n.t('sftp.autoUpdateHint')">
+                  <input type="checkbox" [checked]="watch.autoUpdate()" (change)="onAutoToggle($event)" />
+                  <span>{{ i18n.t('sftp.autoUpdate') }}</span>
+                </label>
+                <span class="watchbar__cool" [class.checking]="watch.checking()">
+                  <span class="dot"></span>
+                  @if (watch.checking()) {
+                    {{ i18n.t('sftp.checking') }}
+                  } @else {
+                    {{ i18n.t('sftp.nextCheck', { n: watch.nextCheckIn() }) }}
+                  }
+                </span>
+                <button class="btn btn--sm" (click)="watch.checkNow()" [disabled]="watch.checking()">
+                  {{ i18n.t('sftp.checkNow') }}
+                </button>
+              </div>
+
+              @if (watch.error(); as err) {
+                <p class="hint hint--error">{{ i18n.t('common.error') }}: {{ err }}</p>
+              }
+
+              @if (watch.saves().length) {
+                <ul class="rsaves">
+                  @for (sv of watch.saves(); track sv.remotePath) {
+                    <li
+                      class="rsave"
+                      [class.rsave--new]="isNewest(sv)"
+                      [class.rsave--busy]="save.loading()"
+                      (click)="openSave(sv)"
+                      [title]="sv.remotePath"
+                    >
+                      <span class="rsave__name">{{ saveName(sv.fileName) }}</span>
+                      @if (isNewest(sv)) {
+                        <span class="rsave__badge">{{ i18n.t('sftp.newest') }}</span>
+                      }
+                      <span class="rsave__date">{{ formatDate(sv.modifiedAtMs) }}</span>
+                      <span class="rsave__size">{{ formatBytes(sv.fileSizeBytes) }}</span>
+                    </li>
+                  }
+                </ul>
+              } @else if (!watch.checking()) {
+                <p class="hint">{{ i18n.t('sftp.noRemoteSaves') }}</p>
+              }
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  } @else if (!showForm()) {
+    <p class="hint">{{ i18n.t('sftp.none') }}</p>
+  }
+</section>

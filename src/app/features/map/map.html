@@ -1,8 +1,8 @@
 <div class="map-page">
   <aside class="sidebar">
     <div class="sidebar__head">
-      <h2>Karte</h2>
-      <button class="icon-btn" (click)="reload()" [disabled]="loading()" title="Neu laden">↻</button>
+      <h2>{{ i18n.t('map.title') }}</h2>
+      <button class="icon-btn" (click)="reload()" [disabled]="loading()" [title]="i18n.t('map.reload')">↻</button>
     </div>
 
     @if (save.summary(); as s) {
@@ -10,39 +10,39 @@
     }
 
     @if (loading()) {
-      <p class="hint">Features werden geladen…</p>
+      <p class="hint">{{ i18n.t('map.loadingFeatures') }}</p>
     }
     @if (error(); as err) {
       <p class="hint hint--error">{{ err }}</p>
       @if (!save.hasSave()) {
-        <a class="link" routerLink="/">→ Zuerst ein Save laden</a>
+        <a class="link" routerLink="/">{{ i18n.t('map.loadSaveFirst') }}</a>
       }
     }
 
     @if (data(); as d) {
-      <p class="total">{{ d.features.length | number }} Objekte</p>
+      <p class="total">{{ d.features.length | number }} {{ i18n.t('map.objectsUnit') }}</p>
 
       <section class="sources">
         <div class="sources__head">
-          <h3>Nächste freie Quellen</h3>
+          <h3>{{ i18n.t('map.nearestSources') }}</h3>
           @if (reference()) {
-            <button class="icon-btn icon-btn--sm" (click)="clearReference()" title="Referenz löschen">✕</button>
+            <button class="icon-btn icon-btn--sm" (click)="clearReference()" [title]="i18n.t('map.clearReference')">✕</button>
           }
         </div>
         @if (!reference()) {
-          <p class="hint">Auf die Karte klicken, um von dort die nächste freie Node je Ressource zu finden (folgt den aktiven Filtern).</p>
+          <p class="hint">{{ i18n.t('map.clickHint') }}</p>
         } @else {
           <ul class="sources__list">
             @for (s of nearestSources(); track s.resource) {
-              <li (click)="focusSource(s.latlng)" title="Zur Node fliegen">
+              <li (click)="focusSource(s.latlng)" [title]="i18n.t('map.flyToNode')">
                 <img class="iico" [src]="s.icon" alt="" />
                 <span class="sources__label">{{ s.label }}</span>
-                <span class="sources__pur sources__pur--{{ s.purity }}">{{ s.purity[0] }}</span>
+                <span class="sources__pur sources__pur--{{ s.purity }}">{{ i18n.t('purShort.' + s.purity) }}</span>
                 <span class="sources__dist">{{ fmtDistance(s.distance) }}</span>
               </li>
             }
             @if (!nearestSources().length) {
-              <li class="hint">Keine freien Nodes (mit aktuellen Filtern).</li>
+              <li class="hint">{{ i18n.t('map.noFreeNodes') }}</li>
             }
           </ul>
         }
@@ -50,7 +50,7 @@
 
       @if (resourceGroups().length) {
         <div class="restree">
-          <h3>Ressourcen</h3>
+          <h3>{{ i18n.t('map.resources') }}</h3>
           <ul class="restree__list">
             @for (g of resourceGroups(); track g.resource) {
               <li>
@@ -58,7 +58,7 @@
                   <button
                     class="restree__exp"
                     (click)="toggleExpand(g.resource)"
-                    [title]="isExpanded(g.resource) ? 'Einklappen' : 'Reinheit anzeigen'"
+                    [title]="isExpanded(g.resource) ? i18n.t('map.collapse') : i18n.t('map.showPurity')"
                   >{{ isExpanded(g.resource) ? '▾' : '▸' }}</button>
                   <label>
                     <input
@@ -102,7 +102,7 @@
               <label>
                 <input type="checkbox" [checked]="visible()[entry[0]]" (change)="toggle(entry[0])" />
                 <span class="swatch" [style.background]="entry[1].color"></span>
-                <span class="legend__label">{{ entry[1].label }}</span>
+                <span class="legend__label">{{ i18n.t('cat.' + entry[0]) }}</span>
                 <span class="legend__count">{{ count(entry[0]) | number }}</span>
               </label>
             </li>
@@ -115,7 +115,7 @@
   <div class="map-host">
     <div #mapEl class="map-canvas"></div>
     @if (!data() && !loading() && !error()) {
-      <div class="overlay">Keine Kartendaten.</div>
+      <div class="overlay">{{ i18n.t('map.noMapData') }}</div>
     }
   </div>
 </div>

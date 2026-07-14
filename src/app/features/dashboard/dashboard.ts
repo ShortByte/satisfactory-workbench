@@ -1,19 +1,50 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { SaveService } from '../../core/save.service';
+import { I18nService } from '../../i18n/i18n.service';
+import { SftpPanel } from './sftp/sftp-panel';
+import type { SavePlatform } from '../../../shared/ipc-types';
 
-/** Walking-skeleton dashboard: load a save and inspect the parsed summary. */
+/** Dashboard: browse/load a save (auto-discovered or manual) and inspect its summary. */
 @Component({
   selector: 'app-dashboard',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, SftpPanel],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
 export class Dashboard implements OnInit {
   protected readonly save = inject(SaveService);
+  protected readonly i18n = inject(I18nService);
 
   ngOnInit(): void {
+    this.refresh();
+  }
+
+  /** Re-scan bundled + auto-discovered save folders. */
+  protected refresh(): void {
     void this.save.refreshBundledSaves();
+    void this.save.discoverSaves();
+  }
+
+  /** Localized platform label for a discovered save folder. */
+  protected platformLabel(platform: SavePlatform): string {
+    return this.i18n.t(`dash.platform.${platform}`);
+  }
+
+  /** Drop the `.sav` extension — the file name is usually the session name. */
+  protected saveName(fileName: string): string {
+    return fileName.replace(/\.sav$/i, '');
+  }
+
+  /** Shorten a long account id for display (keep head + tail). */
+  protected shortId(accountId: string): string {
+    return accountId.length > 12 ? `${accountId.slice(0, 6)}…${accountId.slice(-4)}` : accountId;
+  }
+
+  /** Localized date + time for a save's last-modified timestamp. */
+  protected formatDate(ms: number): string {
+    const locale = this.i18n.lang() === 'de' ? 'de-DE' : 'en-US';
+    return new Date(ms).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
   }
 
   /** Human-readable file size. */

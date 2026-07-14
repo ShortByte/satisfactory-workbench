@@ -1,12 +1,52 @@
-/* Global styles + theme tokens for Satisfactory Tools. */
+/* Satisfactory Workbench — global theme (FICSIT industrial HUD). */
+
+@font-face {
+  font-family: 'Rajdhani';
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/rajdhani-400.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Rajdhani';
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fonts/rajdhani-500.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Rajdhani';
+  font-weight: 600;
+  font-display: swap;
+  src: url('./fonts/rajdhani-600.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Rajdhani';
+  font-weight: 700;
+  font-display: swap;
+  src: url('./fonts/rajdhani-700.ttf') format('truetype');
+}
+
 :root {
-  --bg: #10151b;
-  --panel: #1b2129;
-  --border: #2a323d;
-  --text: #e6ebf1;
-  --muted: #8b97a7;
-  --accent: #ff9e2c; /* Satisfactory orange */
-  --topbar-h: 52px;
+  /* Gunmetal + FICSIT orange */
+  --bg: #14161a;
+  --bg-raised: #1a1e25;
+  --panel: #1c212a;
+  --panel-2: #232935;
+  --border: #313945;
+  --border-bright: #414b5a;
+  --text: #e8ecf1;
+  --muted: #8a97a6;
+  --accent: #f7913a; /* FICSIT orange */
+  --accent-bright: #ffab52;
+  --accent-dim: #6f3f16;
+  --hazard: #ffc21a;
+  --danger: #e05a44;
+  --ok: #57bb6a;
+
+  --topbar-h: 46px;
+  --font-display: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+  /* Rajdhani is the primary face across the whole app for the FICSIT HUD look. */
+  --font-body: 'Rajdhani', 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+  --font-mono: 'Cascadia Code', 'Consolas', monospace;
 }
 
 * {
@@ -20,22 +60,86 @@ body {
 }
 
 body {
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: radial-gradient(ellipse 90% 60% at 50% -8%, #1c2129 0%, transparent 70%);
   color: var(--text);
-  font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
   font-size: 14px;
   line-height: 1.45;
 }
 
+/* Form controls inherit the app face (they default to the system font otherwise),
+   so Rajdhani really is used everywhere. */
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
+
+/* Headings adopt the display face for the HUD feel. */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* HUD chrome — the same uppercase treatment as the nav, applied to structural
+   labels and controls. Deliberately excludes free-form data (table cells, select
+   values, names, hints) and monospace code, which stay in natural case. */
+button,
+th,
+.card__label,
+.field > span,
+.meta > div > span,
+.pill {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Keep `code` and inline monospace readable — never uppercase. */
 code {
-  font-family: 'Cascadia Code', 'Consolas', monospace;
+  text-transform: none;
+}
+
+code {
+  font-family: var(--font-mono);
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 3px;
   padding: 0.05rem 0.35rem;
   font-size: 0.85em;
 }
 
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-bright);
+  border-radius: 0;
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-dim);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Shared HUD panel look — angular/notched corner + orange top edge.
+   Applied to the common .panel / .card classes used across features. */
+:is(.panel, .card) {
+  position: relative;
+  background: linear-gradient(180deg, var(--panel-2) 0%, var(--panel) 100%) !important;
+  border: 1px solid var(--border) !important;
+  border-top: 2px solid var(--accent-dim) !important;
+  /* notched top-left + bottom-right corners */
+  clip-path: polygon(
+    10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px
+  );
+}

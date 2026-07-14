@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import gameDataJson from './data/game-data.json';
+import { I18nService } from '../../i18n/i18n.service';
 import type {
   GameData,
   GRecipe,
@@ -18,6 +19,7 @@ const DATA = gameDataJson as unknown as GameData;
  */
 @Injectable({ providedIn: 'root' })
 export class CalculatorService {
+  private readonly i18n = inject(I18nService);
   readonly data = DATA;
   private readonly resourceSet = new Set(DATA.resources);
   /** item class -> recipes that produce it. */
@@ -106,7 +108,7 @@ export class CalculatorService {
       // Cut recipe loops: an item that depends on itself is treated as a raw
       // input here so quantities stay finite.
       if (ancestors.has(targetItem)) {
-        warnings.add(`Rezept-Kreislauf bei „${this.itemName(targetItem)}" abgeschnitten.`);
+        warnings.add(this.i18n.t('calc.warnLoop', { item: this.itemName(targetItem) }));
         rawMap.set(targetItem, (rawMap.get(targetItem) ?? 0) + targetRate);
         return;
       }

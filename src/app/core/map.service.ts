@@ -1,9 +1,19 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { IpcErrorCode } from '../../shared/ipc-types';
 import type { FeatureCategory, MapFeatureSet } from '../../shared/ipc-types';
+import { I18nService } from '../i18n/i18n.service';
 
-/** Presentation metadata per feature category (label, colour, default visibility). */
+/** Renderer-only sentinel: the Electron bridge is absent (plain browser). */
+const ERR_BRIDGE_UNAVAILABLE = 'ERR_BRIDGE_UNAVAILABLE';
+
+/** Map a known error code/sentinel to an i18n key (unknown → shown verbatim). */
+const ERROR_KEYS: Record<string, string> = {
+  [IpcErrorCode.NoSaveLoaded]: 'err.noSaveLoaded',
+  [ERR_BRIDGE_UNAVAILABLE]: 'err.bridgeUnavailable',
+};
+
+/** Presentation metadata per feature category (colour + default visibility). */
 export interface CategoryStyle {
-  label: string;
   color: string;
   /** Circle radius in pixels on the map. */
   radius: number;
@@ -11,48 +21,54 @@ export interface CategoryStyle {
   visible: boolean;
 }
 
-/** Ordered category styles — order also drives the legend/filter list. */
+/**
+ * Ordered category styles — order also drives the legend/filter list. Labels are
+ * translated at the point of use via the i18n key `cat.<category>`.
+ */
 export const CATEGORY_STYLES: Record<FeatureCategory, CategoryStyle> = {
-  resourceNode: { label: 'Ressourcen-Nodes', color: '#ffd23f', radius: 5, visible: true },
-  geyser: { label: 'Geysire', color: '#00e5ff', radius: 5, visible: true },
-  fracking: { label: 'Fracking (Öl/Gas)', color: '#b06bff', radius: 4, visible: true },
-  resourceDeposit: { label: 'Vorkommen (begrenzt)', color: '#c9a227', radius: 2, visible: false },
-  extractor: { label: 'Extraktoren', color: '#ff5722', radius: 5, visible: true },
-  production: { label: 'Produktion', color: '#4caf50', radius: 3, visible: true },
-  power: { label: 'Strom', color: '#ffeb3b', radius: 2, visible: false },
-  logistics: { label: 'Logistik', color: '#03a9f4', radius: 1.5, visible: false },
-  storage: { label: 'Lager', color: '#8d6e63', radius: 3, visible: true },
-  vehicle: { label: 'Fahrzeuge', color: '#ff9800', radius: 3, visible: true },
-  creature: { label: 'Kreaturen', color: '#e91e63', radius: 1.5, visible: false },
-  flora: { label: 'Flora/Pickups', color: '#7cb342', radius: 1.5, visible: false },
-  player: { label: 'Spieler', color: '#ffffff', radius: 5, visible: true },
-  other: { label: 'Sonstiges/Struktur', color: '#607d8b', radius: 1.5, visible: false },
+  resourceNode: { color: '#ffd23f', radius: 5, visible: true },
+  geyser: { color: '#00e5ff', radius: 5, visible: true },
+  fracking: { color: '#b06bff', radius: 4, visible: true },
+  resourceDeposit: { color: '#c9a227', radius: 2, visible: false },
+  extractor: { color: '#ff5722', radius: 5, visible: true },
+  production: { color: '#4caf50', radius: 3, visible: true },
+  power: { color: '#ffeb3b', radius: 2, visible: false },
+  logistics: { color: '#03a9f4', radius: 1.5, visible: false },
+  storage: { color: '#8d6e63', radius: 3, visible: true },
+  vehicle: { color: '#ff9800', radius: 3, visible: true },
+  creature: { color: '#e91e63', radius: 1.5, visible: false },
+  flora: { color: '#7cb342', radius: 1.5, visible: false },
+  player: { color: '#ffffff', radius: 5, visible: true },
+  other: { color: '#607d8b', radius: 1.5, visible: false },
 };
 
-/** Display info for an extractable resource (keyed by short class, e.g. "OreIron"). */
+/**
+ * Display info for an extractable resource (keyed by short class, e.g. "OreIron").
+ * `labelKey` is an i18n key; resolve it via `I18nService.t(labelKey)`.
+ */
 export interface ResourceInfo {
-  label: string;
+  labelKey: string;
   color: string;
 }
 
-/** Resource registry: German label + a recognisable colour per raw resource. */
+/** Resource registry: i18n label key + a recognisable colour per raw resource. */
 export const RESOURCE_INFO: Record<string, ResourceInfo> = {
-  OreIron: { label: 'Eisen', color: '#c98a5e' },
-  OreCopper: { label: 'Kupfer', color: '#e07b39' },
-  OreGold: { label: 'Caterium', color: '#e6c200' },
-  Coal: { label: 'Kohle', color: '#6b7280' },
-  Stone: { label: 'Kalkstein', color: '#d9cba3' },
-  RawQuartz: { label: 'Roh-Quarz', color: '#e08ad0' },
-  Sulfur: { label: 'Schwefel', color: '#e6d23a' },
-  OreBauxite: { label: 'Bauxit', color: '#c96f4a' },
-  OreUranium: { label: 'Uran', color: '#8dff5a' },
-  SAM: { label: 'SAM', color: '#b06bff' },
-  LiquidOil: { label: 'Rohöl', color: '#9b59b6' },
-  Water: { label: 'Wasser', color: '#3a9bd6' },
-  NitrogenGas: { label: 'Stickstoffgas', color: '#6fa8dc' },
+  OreIron: { labelKey: 'res.OreIron', color: '#c98a5e' },
+  OreCopper: { labelKey: 'res.OreCopper', color: '#e07b39' },
+  OreGold: { labelKey: 'res.OreGold', color: '#e6c200' },
+  Coal: { labelKey: 'res.Coal', color: '#6b7280' },
+  Stone: { labelKey: 'res.Stone', color: '#d9cba3' },
+  RawQuartz: { labelKey: 'res.RawQuartz', color: '#e08ad0' },
+  Sulfur: { labelKey: 'res.Sulfur', color: '#e6d23a' },
+  OreBauxite: { labelKey: 'res.OreBauxite', color: '#c96f4a' },
+  OreUranium: { labelKey: 'res.OreUranium', color: '#8dff5a' },
+  SAM: { labelKey: 'res.SAM', color: '#b06bff' },
+  LiquidOil: { labelKey: 'res.LiquidOil', color: '#9b59b6' },
+  Water: { labelKey: 'res.Water', color: '#3a9bd6' },
+  NitrogenGas: { labelKey: 'res.NitrogenGas', color: '#6fa8dc' },
 };
 
-const RESOURCE_FALLBACK: ResourceInfo = { label: 'Unbekannt', color: '#8b97a7' };
+const RESOURCE_FALLBACK: ResourceInfo = { labelKey: 'res.unknown', color: '#8b97a7' };
 
 export function resourceInfo(key: string | undefined): ResourceInfo {
   return (key && RESOURCE_INFO[key]) || RESOURCE_FALLBACK;
@@ -65,6 +81,7 @@ export function resourceInfo(key: string | undefined): ResourceInfo {
 @Injectable({ providedIn: 'root' })
 export class MapService {
   private readonly bridge = typeof window !== 'undefined' ? window.satisfactory : undefined;
+  private readonly i18n = inject(I18nService);
 
   private readonly _data = signal<MapFeatureSet | null>(null);
   private readonly _loading = signal(false);
@@ -72,13 +89,19 @@ export class MapService {
 
   readonly data = this._data.asReadonly();
   readonly loading = this._loading.asReadonly();
-  readonly error = this._error.asReadonly();
+  /** Translated error message; re-evaluates when the language changes. */
+  readonly error = computed<string | null>(() => {
+    const e = this._error();
+    if (!e) return null;
+    const key = ERROR_KEYS[e];
+    return key ? this.i18n.t(key) : e;
+  });
   readonly hasData = computed(() => this._data() !== null);
 
   /** Load features for the current save. Safe to call repeatedly; refetches. */
   async load(): Promise<void> {
     if (!this.bridge) {
-      this._error.set('Electron-Bridge nicht verfügbar.');
+      this._error.set(ERR_BRIDGE_UNAVAILABLE);
       return;
     }
     this._loading.set(true);

@@ -1,16 +1,24 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron';
 import { readdir, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import type { SatisfactorySave } from '@etothepii/satisfactory-file-parser';
 import {
   IpcChannels,
+  IpcErrorCode,
   type BundledSave,
   type IpcResult,
   type MapFeatureSet,
+  type RemoteSave,
+  type SaveLocation,
   type SaveSummary,
+  type SftpConnection,
+  type SftpConnectionInput,
 } from '../src/shared/ipc-types';
 import { parseSaveFile } from './save-service';
 import { extractMapFeatures } from './map-service';
+import { discoverSaveLocations } from './save-locations';
+import { addConnection, listConnections, removeConnection } from './sftp-config';
+import { downloadRemoteSave, listRemoteSaves, testConnection } from './sftp-service';
 
 /** Dev server URL served by `ng serve` (see the `dev` npm script). */
 const DEV_SERVER_URL = process.env.ELECTRON_RENDERER_URL ?? 'http://localhost:4200';
@@ -30,18 +38,23 @@ let mainWindow: BrowserWindow | null = null;
  */
 let currentSave: SatisfactorySave | null = null;
 
-/** App logo — in dev it lives in public/, in the packaged app in the renderer output. */
+/**
+ * App logo for the window/taskbar. In dev we use the multi-size .ico for a crisp
+ * taskbar icon; in the packaged app the exe icon (set by electron-builder from
+ * build/icon.ico) drives the taskbar, and the renderer logo.png is the fallback.
+ */
 const APP_ICON = app.isPackaged
   ? resolve(__dirname, '../../dist/satisfactory-tools/browser/logo.png')
-  : resolve(__dirname, '../../public/logo.png');
+  : resolve(__dirname, '../../build/icon.ico');
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
-    backgroundColor: '#1b1f24',
+    backgroundColor: '#14161a',
     show: false,
     icon: APP_ICON,
+    frame: false, // custom title bar (rendered by the Angular app)
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -52,6 +65,10 @@ function createWindow(): void {
 
   mainWindow.once('ready-to-show', () => mainWindow?.show());
   mainWindow.on('closed', () => (mainWindow = null));
+  const sendMaximized = () =>
+    mainWindow?.webContents.send(IpcChannels.WindowMaximizedChanged, mainWindow.isMaximized());
+  mainWindow.on('maximize', sendMaximized);
+  mainWindow.on('unmaximize', sendMaximized);
   mainWindow.webContents.on('did-finish-load', () =>
     console.log('[main] renderer loaded:', mainWindow?.webContents.getURL()),
   );
@@ -89,11 +106,12 @@ async function toResult<T>(fn: () => Promise<T>): Promise<IpcResult<T>> {
 function registerIpcHandlers(): void {
   ipcMain.handle(
     IpcChannels.OpenSaveDialog,
-    (): Promise<IpcResult<SaveSummary | null>> =>
+    (_evt, title?: string): Promise<IpcResult<SaveSummary | null>> =>
       toResult(async () => {
         if (!mainWindow) return null;
         const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-          title: 'Satisfactory Save-Datei öffnen',
+          // Title is localized in the renderer and passed in; keep an English fallback.
+          title: title ?? 'Open Satisfactory save',
           properties: ['openFile'],
           defaultPath: BUNDLED_SAVES_DIR,
           filters: [{ name: 'Satisfactory Save', extensions: ['sav'] }],
@@ -119,7 +137,7 @@ function registerIpcHandlers(): void {
     IpcChannels.GetMapFeatures,
     (): Promise<IpcResult<MapFeatureSet>> =>
       toResult(async () => {
-        if (!currentSave) throw new Error('Keine Save-Datei geladen.');
+        if (!currentSave) throw new Error(IpcErrorCode.NoSaveLoaded);
         return extractMapFeatures(currentSave);
       }),
   );
@@ -144,9 +162,94 @@ function registerIpcHandlers(): void {
         return saves;
       }),
   );
+
+  ipcMain.handle(
+    IpcChannels.DiscoverSaves,
+    (): Promise<IpcResult<SaveLocation[]>> => toResult(() => discoverSaveLocations()),
+  );
+
+  // ── SFTP dedicated-server connections ────────────────────────────────
+  ipcMain.handle(
+    IpcChannels.SftpList,
+    (): Promise<IpcResult<SftpConnection[]>> => toResult(() => listConnections()),
+  );
+
+  ipcMain.handle(
+    IpcChannels.SftpAdd,
+    (_evt, input: SftpConnectionInput): Promise<IpcResult<SftpConnection>> =>
+      toResult(() => addConnection(input)),
+  );
+
+  ipcMain.handle(
+    IpcChannels.SftpRemove,
+    (_evt, id: string): Promise<IpcResult<null>> =>
+      toResult(async () => {
+        await removeConnection(id);
+        return null;
+      }),
+  );
+
+  ipcMain.handle(
+    IpcChannels.SftpTest,
+    (_evt, input: SftpConnectionInput): Promise<IpcResult<RemoteSave[]>> =>
+      toResult(() =>
+        testConnection(
+          {
+            id: '',
+            name: input.name,
+            host: input.host,
+            port: input.port && input.port > 0 ? input.port : 22,
+            username: input.username,
+            remoteDir: input.remoteDir || '.',
+            authType: input.authType,
+          },
+          input.secret,
+        ),
+      ),
+  );
+
+  ipcMain.handle(
+    IpcChannels.SftpPickKey,
+    (): Promise<IpcResult<string | null>> =>
+      toResult(async () => {
+        if (!mainWindow) return null;
+        const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+          title: 'Select SSH private key',
+          properties: ['openFile', 'showHiddenFiles'],
+        });
+        return canceled || filePaths.length === 0 ? null : filePaths[0];
+      }),
+  );
+
+  ipcMain.handle(
+    IpcChannels.SftpListSaves,
+    (_evt, id: string): Promise<IpcResult<RemoteSave[]>> => toResult(() => listRemoteSaves(id)),
+  );
+
+  ipcMain.handle(
+    IpcChannels.SftpOpen,
+    (_evt, id: string, remotePath: string, modifiedAtMs: number): Promise<IpcResult<SaveSummary>> =>
+      toResult(async () => {
+        const localPath = await downloadRemoteSave(id, remotePath, modifiedAtMs);
+        const { summary, save } = await parseSaveFile(localPath);
+        currentSave = save;
+        return summary;
+      }),
+  );
+
+  // Custom title-bar window controls.
+  ipcMain.on(IpcChannels.WindowMinimize, () => mainWindow?.minimize());
+  ipcMain.on(IpcChannels.WindowMaximizeToggle, () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMaximized()) mainWindow.unmaximize();
+    else mainWindow.maximize();
+  });
+  ipcMain.on(IpcChannels.WindowClose, () => mainWindow?.close());
+  ipcMain.handle(IpcChannels.WindowIsMaximized, () => mainWindow?.isMaximized() ?? false);
 }
 
 app.whenReady().then(() => {
+  Menu.setApplicationMenu(null); // no default Electron menu bar
   registerIpcHandlers();
   createWindow();
 
