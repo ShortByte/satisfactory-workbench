@@ -21,70 +21,90 @@
 
     @if (data(); as d) {
       <p class="total">{{ d.features.length | number }} Objekte</p>
+
+      <section class="sources">
+        <div class="sources__head">
+          <h3>Nächste freie Quellen</h3>
+          @if (reference()) {
+            <button class="icon-btn icon-btn--sm" (click)="clearReference()" title="Referenz löschen">✕</button>
+          }
+        </div>
+        @if (!reference()) {
+          <p class="hint">Auf die Karte klicken, um von dort die nächste freie Node je Ressource zu finden (folgt den aktiven Filtern).</p>
+        } @else {
+          <ul class="sources__list">
+            @for (s of nearestSources(); track s.resource) {
+              <li (click)="focusSource(s.latlng)" title="Zur Node fliegen">
+                <img class="iico" [src]="s.icon" alt="" />
+                <span class="sources__label">{{ s.label }}</span>
+                <span class="sources__pur sources__pur--{{ s.purity }}">{{ s.purity[0] }}</span>
+                <span class="sources__dist">{{ fmtDistance(s.distance) }}</span>
+              </li>
+            }
+            @if (!nearestSources().length) {
+              <li class="hint">Keine freien Nodes (mit aktuellen Filtern).</li>
+            }
+          </ul>
+        }
+      </section>
+
+      @if (resourceGroups().length) {
+        <div class="restree">
+          <h3>Ressourcen</h3>
+          <ul class="restree__list">
+            @for (g of resourceGroups(); track g.resource) {
+              <li>
+                <div class="restree__res">
+                  <button
+                    class="restree__exp"
+                    (click)="toggleExpand(g.resource)"
+                    [title]="isExpanded(g.resource) ? 'Einklappen' : 'Reinheit anzeigen'"
+                  >{{ isExpanded(g.resource) ? '▾' : '▸' }}</button>
+                  <label>
+                    <input
+                      type="checkbox"
+                      [checked]="resourceVisible(g.resource)"
+                      (change)="toggleResource(g.resource)"
+                    />
+                    <img class="iico" [src]="g.icon" alt="" />
+                    <span class="restree__label">{{ g.label }}</span>
+                    <span class="restree__count">{{ g.total | number }}</span>
+                  </label>
+                </div>
+                @if (isExpanded(g.resource)) {
+                  <ul class="restree__pur">
+                    @for (p of g.purities; track p.purity) {
+                      <li>
+                        <label>
+                          <input
+                            type="checkbox"
+                            [checked]="resPurVisible(g.resource, p.purity)"
+                            (change)="toggleResPurity(g.resource, p.purity)"
+                          />
+                          <span class="pur-dot pur-dot--{{ p.purity }}"></span>
+                          <span class="restree__label">{{ p.label }}</span>
+                          <span class="restree__count">{{ p.count | number }}</span>
+                        </label>
+                      </li>
+                    }
+                  </ul>
+                }
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
       <ul class="legend">
         @for (entry of categories; track entry[0]) {
-          @if (count(entry[0]) > 0) {
+          @if (entry[0] !== 'resourceNode' && entry[0] !== 'extractor' && count(entry[0]) > 0) {
             <li class="legend__item">
               <label>
-                <input
-                  type="checkbox"
-                  [checked]="visible()[entry[0]]"
-                  (change)="toggle(entry[0])"
-                />
+                <input type="checkbox" [checked]="visible()[entry[0]]" (change)="toggle(entry[0])" />
                 <span class="swatch" [style.background]="entry[1].color"></span>
                 <span class="legend__label">{{ entry[1].label }}</span>
                 <span class="legend__count">{{ count(entry[0]) | number }}</span>
               </label>
-
-              @if (entry[0] === 'extractor' && visible()['extractor'] && extractorResources().length) {
-                <ul class="subfilter">
-                  @for (r of extractorResources(); track r.key) {
-                    <li>
-                      <label>
-                        <input
-                          type="checkbox"
-                          [checked]="visibleResources()[r.key] !== false"
-                          (change)="toggleResource(r.key)"
-                        />
-                        <span class="swatch swatch--sm" [style.background]="r.color"></span>
-                        <span class="legend__label">{{ r.label }}</span>
-                        <span class="legend__count">{{ r.count | number }}</span>
-                      </label>
-                    </li>
-                  }
-                </ul>
-              }
-
-              @if (entry[0] === 'resourceNode' && visible()['resourceNode'] && nodeResources().length) {
-                <ul class="subfilter">
-                  @for (p of purities; track p.key) {
-                    <li>
-                      <label>
-                        <input
-                          type="checkbox"
-                          [checked]="visiblePurities()[p.key] !== false"
-                          (change)="togglePurity(p.key)"
-                        />
-                        <span class="legend__label legend__label--muted">Reinheit: {{ p.label }}</span>
-                      </label>
-                    </li>
-                  }
-                  @for (r of nodeResources(); track r.key) {
-                    <li>
-                      <label>
-                        <input
-                          type="checkbox"
-                          [checked]="visibleResources()[r.key] !== false"
-                          (change)="toggleResource(r.key)"
-                        />
-                        <span class="swatch swatch--sm" [style.background]="r.color"></span>
-                        <span class="legend__label">{{ r.label }}</span>
-                        <span class="legend__count">{{ r.count | number }}</span>
-                      </label>
-                    </li>
-                  }
-                </ul>
-              }
             </li>
           }
         }

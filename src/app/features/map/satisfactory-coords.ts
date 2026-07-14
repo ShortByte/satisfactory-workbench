@@ -55,6 +55,20 @@ export function gameToLatLng(x: number, y: number): L.LatLngExpression {
   return [-(1 - vert) * EXTENT, horiz * EXTENT];
 }
 
+/** Inverse of {@link gameToLatLng}: a Leaflet LatLng back to game (x, y) in cm. */
+export function latLngToGame(latlng: L.LatLng): { x: number; y: number } {
+  const horiz = latlng.lng / EXTENT;
+  const vert = 1 + latlng.lat / EXTENT;
+  let fx = TRANSPOSE ? vert : horiz;
+  let fy = TRANSPOSE ? horiz : vert;
+  if (FLIP_X) fx = 1 - fx;
+  if (FLIP_Y) fy = 1 - fy;
+  return {
+    x: GX_MIN + fx * (GX_MAX - GX_MIN),
+    y: GY_MIN + fy * (GY_MAX - GY_MIN),
+  };
+}
+
 /** LatLng bounds covering the whole map image. */
 export function mapBounds(): L.LatLngBounds {
   return L.latLngBounds([-EXTENT, 0], [0, EXTENT]);

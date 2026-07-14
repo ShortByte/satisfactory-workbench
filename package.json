@@ -32,6 +32,7 @@
     "@etothepii/satisfactory-file-parser": "^4.1.1",
     "@types/leaflet": "^1.9.21",
     "leaflet": "^1.9.4",
+    "leaflet.markercluster": "^1.5.3",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
@@ -39,6 +40,7 @@
     "@angular/build": "^22.0.6",
     "@angular/cli": "^22.0.6",
     "@angular/compiler-cli": "^22.0.0",
+    "@types/leaflet.markercluster": "^1.5.6",
     "@types/node": "^26.1.1",
     "cbor-x": "^1.6.4",
     "concurrently": "^10.0.3",

@@ -108,6 +108,11 @@ Doppel-Marker entsteht; ihr Extraktor bekommt die Reinheit über `mExtractableRe
   SVG-Glyph-Badges (`markerIcon`). Massen-Layer (Flora/Logistik/Strom/Kreaturen/
   Vorkommen/Sonstiges) sind Canvas-Kreise. Layer werden **lazy** pro Kategorie
   gebaut (`ensureLayer`).
+- **Performance:** Icon-(DOM-)Kategorien nutzen `L.markerClusterGroup`
+  (leaflet.markercluster): weit rausgezoomt Cluster-Bubbles, ab Zoom 6 einzeln,
+  `removeOutsideVisibleBounds` (Viewport-Culling). Karte: `markerZoomAnimation:
+  false`, `fadeAnimation: false`; Tile-Layer `updateWhenZooming: false`. Cluster-
+  Radius/Zoom in `ensureLayer` einstellbar.
 
 ## Daten neu erzeugen
 
@@ -119,8 +124,9 @@ Aktualisieren siehe [`scripts/data/`](../scripts/data/):
 
 Offene, sinnvolle Ausbauten (Priorität grob absteigend):
 
-1. **„Beste/nächste freie Quelle"** — zu einem Kartenpunkt (Referenzposition per
-   Klick) den nächstgelegenen freien Node passender Ressource/Reinheit finden.
+1. ✅ **„Nächste freie Quelle"** — Klick auf die Karte setzt einen Referenzpunkt;
+   die Sidebar zeigt pro Ressource die nächstgelegene freie Node (Distanz +
+   Reinheit, folgt den aktiven Ressourcen-/Reinheits-Filtern, Klick → hinfliegen).
 2. **Deposits & Wells typisieren** — begrenzte Vorkommen (`mResourceDepositTableIndex`)
    und Öl-/Wasser-/Stickstoff-Wells (th.gl hat `*_Deposit`/`*_Well`-Gruppen).
 3. **Exakter Loop-Solver** — lineares Gleichungssystem statt Kreislauf-Abschneiden.

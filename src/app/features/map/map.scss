@@ -41,6 +41,53 @@
 .session { color: var(--accent); font-size: 0.85rem; margin: 0.25rem 0 0.75rem; }
 .total { color: var(--muted); font-size: 0.8rem; margin: 0 0 0.5rem; }
 
+.sources {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  margin-bottom: 0.75rem;
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel));
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    h3 { margin: 0; font-size: 0.9rem; }
+  }
+
+  &__list { list-style: none; margin: 0.4rem 0 0; padding: 0; }
+  &__list li {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.2rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    &:hover { background: rgba(255, 255, 255, 0.05); }
+    &.hint { cursor: default; &:hover { background: none; } }
+  }
+
+  &__label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  &__dist { color: var(--muted); font-variant-numeric: tabular-nums; }
+  &__pur {
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    border-radius: 50%;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #10151b;
+    &--impure { background: #9aa4b0; }
+    &--normal { background: #eef2f7; }
+    &--pure { background: #ffd23f; }
+  }
+}
+
+.icon-btn--sm { width: 20px; height: 20px; font-size: 0.7rem; }
+
 .hint {
   font-size: 0.85rem;
   color: var(--muted);
@@ -74,6 +121,80 @@
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
 
   &--sm { width: 9px; height: 9px; }
+}
+
+.iico {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+.restree {
+  margin-bottom: 0.75rem;
+
+  h3 { margin: 0 0 0.35rem; font-size: 0.95rem; }
+  &__list { list-style: none; margin: 0; padding: 0; }
+
+  &__res {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex: 1;
+      padding: 0.2rem 0;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+  }
+
+  &__exp {
+    border: none;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    width: 16px;
+    font-size: 0.7rem;
+    padding: 0;
+    &:hover { color: var(--text); }
+  }
+
+  &__label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  &__count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.78rem; }
+
+  &__pur {
+    list-style: none;
+    margin: 0 0 0.2rem;
+    padding: 0 0 0 1.8rem;
+    border-left: 1px solid var(--border);
+    margin-left: 0.75rem;
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.12rem 0;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .restree__label { color: var(--text); }
+  }
+}
+
+.pur-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  &--pure { background: #ffd23f; }
+  &--normal { background: #eef2f7; }
+  &--impure { background: #9aa4b0; }
 }
 
 .subfilter {
@@ -151,6 +272,40 @@
   .sf-ext {
     border-radius: 6px;
     border-color: #ff9e2c;
+  }
+
+  /* Marker cluster bubbles, themed for the dark UI. */
+  .marker-cluster {
+    background: rgba(255, 158, 44, 0.3);
+    div {
+      background: rgba(255, 158, 44, 0.9);
+      color: #10151b;
+      font-weight: 700;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+    span { line-height: 30px; }
+  }
+
+  /* Animated dashed lines from the reference point to the nearest sources. */
+  .source-line {
+    animation: sf-dash 0.8s linear infinite;
+    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.7));
+  }
+  @keyframes sf-dash {
+    to { stroke-dashoffset: -14; }
+  }
+  /* Freeze the dash animation while the map is moving (perf). */
+  .sf-moving .source-line { animation: none; }
+
+  /* Reference-point crosshair for the nearest-source search. */
+  .sf-ref {
+    color: #ff2c2c;
+    font-size: 22px;
+    line-height: 24px;
+    text-align: center;
+    font-weight: 700;
+    text-shadow: 0 0 3px #000, 0 0 3px #000;
+    pointer-events: none;
   }
   .leaflet-popup-content-wrapper,
   .leaflet-popup-tip {

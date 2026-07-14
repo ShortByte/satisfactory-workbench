@@ -13,11 +13,29 @@ import {
 import { RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import * as L from 'leaflet';
+import 'leaflet.markercluster'; // extends L with markerClusterGroup
 import type { FeatureCategory, MapFeature, MapFeatureSet } from '../../../shared/ipc-types';
 import { CATEGORY_STYLES, CategoryStyle, MapService, resourceInfo } from '../../core/map.service';
 import { SaveService } from '../../core/save.service';
-import { gameToLatLng, mapBounds, SF_MAP } from './satisfactory-coords';
-import { extractorMarker, ICON_CATEGORIES, markerIcon, nodeMarker } from './marker-icons';
+import { gameToLatLng, latLngToGame, mapBounds, SF_MAP } from './satisfactory-coords';
+import {
+  extractorMarker,
+  ICON_CATEGORIES,
+  markerIcon,
+  nodeMarker,
+  resourceIconUrl,
+} from './marker-icons';
+
+/** One nearest free node found from the reference point. */
+export interface NearestSource {
+  resource: string;
+  label: string;
+  icon: string;
+  purity: string;
+  /** Distance in metres. */
+  distance: number;
+  latlng: L.LatLngExpression;
+}
 
 /** German labels for node purity. */
 const PURITY_LABELS: Record<string, string> = { pure: 'Rein', normal: 'Normal', impure: 'Unrein' };
@@ -55,37 +73,87 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
     ) as Record<FeatureCategory, boolean>,
   );
 
-  /** Per-resource visibility (applies to nodes + extractors). Empty = show all. */
-  protected readonly visibleResources = signal<Record<string, boolean>>({});
-  /** Per-purity visibility for resource nodes. */
-  protected readonly visiblePurities = signal<Record<string, boolean>>({
-    pure: true,
-    normal: true,
-    impure: true,
-  });
-  protected readonly purities = [
-    { key: 'pure', label: 'Rein' },
-    { key: 'normal', label: 'Normal' },
-    { key: 'impure', label: 'Unrein' },
-  ];
+  /**
+   * Per-(resource:purity) visibility, shared by resource nodes (unclaimed) and
+   * extractors (claimed). A missing key means visible. Persisted to localStorage.
+   */
+  protected readonly resourceVis = signal<Record<string, boolean>>({});
+  /** Which resource groups are expanded (to show their purity toggles). */
+  protected readonly expanded = signal<Record<string, boolean>>({});
 
-  private resourceCounts(cat: FeatureCategory) {
+  private static readonly PURITY_ORDER = ['pure', 'normal', 'impure'] as const;
+
+  /** Resource groups (nodes + extractors combined) with per-purity counts. */
+  protected readonly resourceGroups = computed(() => {
     const d = this.data();
-    if (!d) return [] as { key: string; label: string; color: string; count: number }[];
-    const counts = new Map<string, number>();
+    type Group = {
+      resource: string;
+      label: string;
+      icon: string;
+      total: number;
+      purities: { purity: string; label: string; count: number }[];
+    };
+    if (!d) return [] as Group[];
+    const m = new Map<string, Map<string, number>>();
     for (const f of d.features) {
-      if (f.category === cat && f.resource) counts.set(f.resource, (counts.get(f.resource) ?? 0) + 1);
+      if ((f.category === 'resourceNode' || f.category === 'extractor') && f.resource) {
+        const p = f.purity ?? 'normal';
+        let pm = m.get(f.resource);
+        if (!pm) m.set(f.resource, (pm = new Map()));
+        pm.set(p, (pm.get(p) ?? 0) + 1);
+      }
     }
-    return [...counts.entries()]
-      .map(([key, count]) => ({ key, count, ...resourceInfo(key) }))
-      .sort((a, b) => b.count - a.count);
-  }
+    return [...m.entries()]
+      .map(([resource, pm]) => ({
+        resource,
+        label: resourceInfo(resource).label,
+        icon: resourceIconUrl(resource),
+        total: [...pm.values()].reduce((a, b) => a + b, 0),
+        purities: MapView.PURITY_ORDER.filter((p) => pm.has(p)).map((p) => ({
+          purity: p,
+          label: PURITY_LABELS[p],
+          count: pm.get(p) ?? 0,
+        })),
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  });
 
-  /** Resources present among resource nodes / extractors — drive the sub-filters. */
-  protected readonly nodeResources = computed(() => this.resourceCounts('resourceNode'));
-  protected readonly extractorResources = computed(() => this.resourceCounts('extractor'));
+  /** Reference point (game cm) set by clicking the map — for nearest-source search. */
+  protected readonly reference = signal<{ x: number; y: number } | null>(null);
+
+  /**
+   * Nearest free node per resource from the reference point, honouring the active
+   * resource + purity sub-filters (so you can e.g. find the nearest *pure* iron).
+   */
+  protected readonly nearestSources = computed<NearestSource[]>(() => {
+    const ref = this.reference();
+    const d = this.data();
+    if (!ref || !d) return [];
+    const vis = this.resourceVis();
+    const best = new Map<string, { f: MapFeature; distSq: number }>();
+    for (const f of d.features) {
+      if (f.category !== 'resourceNode' || !f.resource) continue;
+      if (vis[`${f.resource}:${f.purity ?? 'normal'}`] === false) continue;
+      const dx = f.x - ref.x;
+      const dy = f.y - ref.y;
+      const distSq = dx * dx + dy * dy;
+      const cur = best.get(f.resource);
+      if (!cur || distSq < cur.distSq) best.set(f.resource, { f, distSq });
+    }
+    return [...best.values()]
+      .map(({ f, distSq }) => ({
+        resource: f.resource!,
+        label: resourceInfo(f.resource!).label,
+        icon: resourceIconUrl(f.resource!),
+        purity: f.purity ?? 'normal',
+        distance: Math.sqrt(distSq) / 100, // cm -> m
+        latlng: gameToLatLng(f.x, f.y),
+      }))
+      .sort((a, b) => a.distance - b.distance);
+  });
 
   @ViewChild('mapEl') private mapEl!: ElementRef<HTMLDivElement>;
+  private referenceMarker?: L.Marker;
 
   private map?: L.Map;
   private tileLayer?: L.TileLayer;
@@ -94,23 +162,56 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
   private readonly grouped = new Map<FeatureCategory, MapFeature[]>();
   private readonly built = new Set<FeatureCategory>();
   private readonly canvasRenderer = L.canvas({ padding: 0.5 });
+  /** SVG renderer for the animated source lines (canvas can't be CSS-animated). */
+  private readonly svgRenderer = L.svg({ padding: 0.5 });
+  private readonly sourceLines = L.layerGroup();
 
   constructor() {
+    this.loadFilters();
     // Re-render whenever the feature set changes and the map already exists.
     effect(() => {
       const d = this.data();
       if (d && this.map) this.renderFeatures(d);
     });
-    // Initialise the resource sub-filter to "all visible" when data arrives.
+    // Persist filter settings (category + resource/purity visibility) on change.
     effect(() => {
-      const keys = new Set([
-        ...this.nodeResources().map((r) => r.key),
-        ...this.extractorResources().map((r) => r.key),
-      ]);
-      if (keys.size && Object.keys(this.visibleResources()).length === 0) {
-        this.visibleResources.set(Object.fromEntries([...keys].map((k) => [k, true])));
-      }
+      this.visible();
+      this.resourceVis();
+      this.saveFilters();
     });
+    // Draw animated lines from the reference point to the nearest sources.
+    effect(() => {
+      const sources = this.nearestSources();
+      if (this.map) this.drawSourceLines(sources);
+    });
+  }
+
+  private static readonly STORAGE_KEY = 'sf-map-filters';
+
+  private loadFilters(): void {
+    try {
+      const raw = localStorage.getItem(MapView.STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as {
+        visible?: Record<string, boolean>;
+        resourceVis?: Record<string, boolean>;
+      };
+      if (saved.visible) this.visible.update((v) => ({ ...v, ...saved.visible }));
+      if (saved.resourceVis) this.resourceVis.set(saved.resourceVis);
+    } catch {
+      /* ignore corrupt/unavailable storage */
+    }
+  }
+
+  private saveFilters(): void {
+    try {
+      localStorage.setItem(
+        MapView.STORAGE_KEY,
+        JSON.stringify({ visible: this.visible(), resourceVis: this.resourceVis() }),
+      );
+    } catch {
+      /* ignore */
+    }
   }
 
   ngOnInit(): void {
@@ -127,6 +228,10 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
       preferCanvas: true,
       attributionControl: false,
       zoomControl: true,
+      // Keep Leaflet's default zoom/fade animations (smooth tiles + markers).
+      // Clustering + viewport culling keep the marker count low enough that the
+      // default animation no longer lags. The only animation we disable is the
+      // cluster split/merge fly-around (see markerClusterGroup options below).
       // Loose bounds: allow panning the map almost fully out of view before it
       // eases back (only snaps when the map has essentially left the viewport).
       maxBounds: mapBounds().pad(1.0),
@@ -145,6 +250,16 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
     });
     this.tileLayer.addTo(this.map);
 
+    this.sourceLines.addTo(this.map);
+
+    // Click sets a reference point for the nearest-source search.
+    this.map.on('click', (e: L.LeafletMouseEvent) => this.setReference(e.latlng));
+
+    // Pause the source-line dash animation while panning/zooming (fewer repaints).
+    const container = this.map.getContainer();
+    this.map.on('movestart zoomstart', () => container.classList.add('sf-moving'));
+    this.map.on('moveend zoomend', () => container.classList.remove('sf-moving'));
+
     const existing = this.data();
     if (existing) this.renderFeatures(existing);
   }
@@ -158,25 +273,105 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
     return this.data()?.counts[cat] ?? 0;
   }
 
+  /** Place/move the reference point and remember its game coordinates. */
+  private setReference(latlng: L.LatLng): void {
+    if (!this.map) return;
+    this.reference.set(latLngToGame(latlng));
+    if (this.referenceMarker) {
+      this.referenceMarker.setLatLng(latlng);
+    } else {
+      this.referenceMarker = L.marker(latlng, {
+        icon: L.divIcon({ className: 'sf-ref', html: '✛', iconSize: [24, 24], iconAnchor: [12, 12] }),
+        interactive: false,
+        keyboard: false,
+        zIndexOffset: 1000,
+      }).addTo(this.map);
+    }
+  }
+
+  protected clearReference(): void {
+    this.reference.set(null);
+    this.referenceMarker?.remove();
+    this.referenceMarker = undefined;
+  }
+
+  /** Fly to a found source node. */
+  protected focusSource(latlng: L.LatLngExpression): void {
+    this.map?.flyTo(latlng, Math.max(this.map.getZoom(), SF_MAP.maxNativeZoom), { duration: 0.6 });
+  }
+
+  /** Human-readable distance. */
+  protected fmtDistance(m: number): string {
+    return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
+  }
+
+  /** Draw animated dashed lines from the reference point to each nearest source. */
+  private drawSourceLines(sources: NearestSource[]): void {
+    if (!this.map) return;
+    this.sourceLines.clearLayers();
+    const ref = this.reference();
+    if (!ref || !sources.length) return;
+    const refLatLng = gameToLatLng(ref.x, ref.y);
+    for (const s of sources) {
+      L.polyline([refLatLng, s.latlng], {
+        renderer: this.svgRenderer,
+        className: 'source-line',
+        color: resourceInfo(s.resource).color,
+        weight: 2,
+        opacity: 0.9,
+        dashArray: '5 9',
+        interactive: false,
+      }).addTo(this.sourceLines);
+    }
+  }
+
   protected toggle(cat: FeatureCategory): void {
     const next = { ...this.visible(), [cat]: !this.visible()[cat] };
     this.visible.set(next);
     this.syncLayerVisibility();
   }
 
-  /** Toggle a resource (affects node + extractor layers). */
-  protected toggleResource(key: string): void {
-    const cur = this.visibleResources();
-    this.visibleResources.set({ ...cur, [key]: cur[key] === false });
-    this.rebuildCategory('resourceNode');
-    this.rebuildCategory('extractor');
+  /** Is a resource+purity currently shown? (missing key = shown) */
+  protected resPurVisible(resource: string, purity: string): boolean {
+    return this.resourceVis()[`${resource}:${purity}`] !== false;
   }
 
-  /** Toggle a purity level (affects resource nodes). */
-  protected togglePurity(key: string): void {
-    const cur = this.visiblePurities();
-    this.visiblePurities.set({ ...cur, [key]: cur[key] === false });
+  /** Is a whole resource shown? (any of its purities visible) */
+  protected resourceVisible(resource: string): boolean {
+    const g = this.resourceGroups().find((x) => x.resource === resource);
+    return !!g && g.purities.some((p) => this.resPurVisible(resource, p.purity));
+  }
+
+  /** Toggle one resource+purity (affects both claimed + unclaimed markers). */
+  protected toggleResPurity(resource: string, purity: string): void {
+    const key = `${resource}:${purity}`;
+    const cur = this.resourceVis();
+    this.resourceVis.set({ ...cur, [key]: cur[key] === false });
+    this.rebuildResources();
+  }
+
+  /** Toggle a whole resource (all its purities on/off together). */
+  protected toggleResource(resource: string): void {
+    const g = this.resourceGroups().find((x) => x.resource === resource);
+    if (!g) return;
+    const turnOff = this.resourceVisible(resource);
+    const next = { ...this.resourceVis() };
+    for (const p of g.purities) next[`${resource}:${p.purity}`] = !turnOff;
+    this.resourceVis.set(next);
+    this.rebuildResources();
+  }
+
+  protected isExpanded(resource: string): boolean {
+    return this.expanded()[resource] === true;
+  }
+
+  protected toggleExpand(resource: string): void {
+    this.expanded.update((e) => ({ ...e, [resource]: !e[resource] }));
+  }
+
+  private rebuildResources(): void {
     this.rebuildCategory('resourceNode');
+    this.rebuildCategory('extractor');
   }
 
   protected reload(): void {
@@ -225,16 +420,28 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
     const existing = this.layers.get(cat);
     if (existing && this.built.has(cat)) return existing;
 
-    const group = L.layerGroup();
     const style = CATEGORY_STYLES[cat];
     const useIcon = ICON_CATEGORIES.has(cat);
-    // Resource sub-filter applies to nodes + extractors; purity only to nodes.
-    const resFilter = cat === 'resourceNode' || cat === 'extractor' ? this.visibleResources() : null;
-    const purFilter = cat === 'resourceNode' ? this.visiblePurities() : null;
+    // Icon (DOM) categories cluster for performance; canvas categories don't.
+    const group: L.LayerGroup = useIcon
+      ? L.markerClusterGroup({
+          chunkedLoading: true,
+          maxClusterRadius: 55,
+          disableClusteringAtZoom: 6,
+          showCoverageOnHover: false,
+          removeOutsideVisibleBounds: true,
+          // No fly-around animations when clusters split/merge on zoom — snap instead.
+          animate: false,
+          animateAddingMarkers: false,
+          spiderfyOnMaxZoom: false,
+        })
+      : L.layerGroup();
+    // Nodes + extractors are filtered by the unified resource:purity visibility.
+    const resourceFiltered = cat === 'resourceNode' || cat === 'extractor';
+    const vis = resourceFiltered ? this.resourceVis() : null;
 
     for (const f of this.grouped.get(cat) ?? []) {
-      if (resFilter && f.resource && resFilter[f.resource] === false) continue;
-      if (purFilter && f.purity && purFilter[f.purity] === false) continue;
+      if (vis && f.resource && vis[`${f.resource}:${f.purity ?? 'normal'}`] === false) continue;
 
       const latlng = gameToLatLng(f.x, f.y);
       let marker: L.Layer;
@@ -270,7 +477,10 @@ export class MapView implements OnInit, AfterViewInit, OnDestroy {
     if (!this.map) return;
     const vis = this.visible();
     for (const [cat] of this.categories) {
-      if (vis[cat]) {
+      // Nodes + extractors are always on; their content is filtered by the
+      // resource tree (empty layer when everything is toggled off).
+      const show = cat === 'resourceNode' || cat === 'extractor' ? true : vis[cat];
+      if (show) {
         this.ensureLayer(cat).addTo(this.map);
       } else {
         // Only detach if it was ever built; never-shown layers cost nothing.
